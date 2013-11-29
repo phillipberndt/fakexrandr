@@ -44,9 +44,12 @@ Enjoy :-)
 To do
 -----
 
-Not all XRandR calls are implemented yet, but only those that are needed for
-GTK applications to work and those needed to run the `xrandr` tool. Feel free
-to extend this!
+* Not all XRandR calls are implemented yet, but only those that are needed for
+  GTK applications to work and those needed to run the `xrandr` tool. Feel free
+  to extend this!
+* I have a memory leak in the `append_fake_`-methods which I don't know how to
+  fix right now: I can't free the old allocated space for some reason, so it is
+  likely mine is not freed either..
 
 See also
 --------
