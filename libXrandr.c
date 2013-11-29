@@ -31,6 +31,19 @@ XRRCrtcGamma *(*_XRRGetCrtcGamma)(Display *dpy, RRCrtc crtc);
 Status (*_XRRGetCrtcTransform)(Display	*dpy, RRCrtc crtc, XRRCrtcTransformAttributes **attributes);
 int (*_XRRGetCrtcGammaSize)(Display *dpy, RRCrtc crtc);
 Status (*_XRRSetCrtcConfig)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs);
+Atom *(*_XRRListOutputProperties)(Display *dpy, RROutput output, int *nprop);
+XRRPropertyInfo *(*_XRRQueryOutputProperty)(Display *dpy, RROutput output, Atom property);
+void (*_XRRConfigureOutputProperty)(Display *dpy, RROutput output, Atom property, Bool pending, Bool range, int num_values, long *values);
+void (*_XRRChangeOutputProperty)(Display *dpy, RROutput output, Atom property, Atom type, int format, int mode, _Xconst unsigned char *data, int nelements);
+void (*_XRRDeleteOutputProperty)(Display *dpy, RROutput output, Atom property);
+int (*_XRRGetOutputProperty)(Display *dpy, RROutput output, Atom property, long offset, long length, Bool _delete,
+	Bool pending, Atom req_type, Atom *actual_type, int *actual_format, unsigned long *nitems, unsigned long *bytes_after, unsigned char **prop);
+void (*_XRRAddOutputMode)(Display *dpy, RROutput output, RRMode mode);
+void (*_XRRDeleteOutputMode )(Display *dpy, RROutput output, RRMode mode);
+void (*_XRRSetOutputPrimary)(Display *dpy, Window window, RROutput output);
+void (*_XRRSetCrtcGamma)(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma);
+void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams);
+Status (*_XRRSetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning);
 
 static void _init() __attribute__((constructor));
 static void _init() {
@@ -45,6 +58,18 @@ static void _init() {
 	_XRRGetCrtcTransform = dlsym(xrandr_lib, "XRRGetCrtcTransform");
 	_XRRGetCrtcGammaSize = dlsym(xrandr_lib, "XRRGetCrtcGammaSize");
 	_XRRSetCrtcConfig = dlsym(xrandr_lib, "XRRSetCrtcConfig");
+	_XRRListOutputProperties = dlsym(xrandr_lib, "XRRListOutputProperties");
+	_XRRQueryOutputProperty = dlsym(xrandr_lib, "XRRQueryOutputProperty");
+	_XRRConfigureOutputProperty = dlsym(xrandr_lib, "XRRConfigureOutputProperty");
+	_XRRChangeOutputProperty = dlsym(xrandr_lib, "XRRChangeOutputProperty");
+	_XRRDeleteOutputProperty = dlsym(xrandr_lib, "XRRDeleteOutputProperty");
+	_XRRGetOutputProperty = dlsym(xrandr_lib, "XRRGetOutputProperty");
+	_XRRAddOutputMode = dlsym(xrandr_lib, "XRRAddOutputMode");
+	_XRRDeleteOutputMode  = dlsym(xrandr_lib, "XRRDeleteOutputMode ");
+	_XRRSetOutputPrimary = dlsym(xrandr_lib, "XRRSetOutputPrimary");
+	_XRRSetCrtcGamma = dlsym(xrandr_lib, "XRRSetCrtcGamma");
+	_XRRSetCrtcTransform  = dlsym(xrandr_lib, "XRRSetCrtcTransform ");
+	_XRRSetPanning = dlsym(xrandr_lib, "XRRSetPanning");
 }
 
 static bool check_if_crtc_is_wrong(Display *dpy, XRRScreenResources *resources, RRCrtc crtc) {
@@ -168,6 +193,59 @@ XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RRO
 	return retval;
 }
 
+Atom *XRRListOutputProperties(Display *dpy, RROutput output, int *nprop) {
+	return _XRRListOutputProperties(dpy, output & ~XID_SPLIT_MOD, nprop);
+}
+
+XRRPropertyInfo *XRRQueryOutputProperty(Display *dpy, RROutput output, Atom property) {
+	return _XRRQueryOutputProperty(dpy, output & ~XID_SPLIT_MOD, property);
+}
+
+void XRRConfigureOutputProperty(Display *dpy, RROutput output, Atom property, Bool pending, Bool range, int num_values, long *values) {
+	if(output & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRConfigureOutputProperty(dpy, output, property, pending, range, num_values, values);
+}
+
+void XRRChangeOutputProperty(Display *dpy, RROutput output, Atom property, Atom type, int format, int mode, _Xconst unsigned char *data, int nelements) {
+	if(output & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRChangeOutputProperty(dpy, output, property, type, format, mode, data, nelements);
+}
+
+void XRRDeleteOutputProperty(Display *dpy, RROutput output, Atom property) {
+	if(output & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRDeleteOutputProperty(dpy, output, property);
+}
+
+int XRRGetOutputProperty(Display *dpy, RROutput output, Atom property, long offset, long length, Bool _delete,
+ Bool pending, Atom req_type, Atom *actual_type, int *actual_format, unsigned long *nitems, unsigned long *bytes_after, unsigned char **prop) {
+	return _XRRGetOutputProperty(dpy, output & ~XID_SPLIT_MOD, property, offset, length, _delete, pending, req_type, actual_type, actual_format, nitems, bytes_after, prop);
+}
+
+void XRRAddOutputMode(Display *dpy, RROutput output, RRMode mode) {
+	if(output & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRAddOutputMode(dpy, output, mode);
+}
+
+void XRRDeleteOutputMode (Display *dpy, RROutput output, RRMode mode) {
+	if(output & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRDeleteOutputMode(dpy, output, mode);
+}
+
+void XRRSetOutputPrimary(Display *dpy, Window window, RROutput output) {
+	_XRRSetOutputPrimary(dpy, window, output & ~XID_SPLIT_MOD);
+}
+
+
 /*
 typedef struct _XRRCrtcInfo {
     Time	    timestamp;
@@ -180,8 +258,7 @@ typedef struct _XRRCrtcInfo {
     Rotation	    rotations;
     int		    npossible;
     RROutput	    *possible;
-} XRRCrtcInfo;
-XRRFreeCrtcInfo (crtc);
+} XRRCrtcInfo; XRRFreeCrtcInfo (crtc);
 */
 XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc crtc) {
 	XRRCrtcInfo *retval = _XRRGetCrtcInfo(dpy, resources, crtc & ~XID_SPLIT_MOD);
@@ -213,9 +290,30 @@ int XRRGetCrtcGammaSize(Display *dpy, RRCrtc crtc) {
 	return _XRRGetCrtcGammaSize(dpy, crtc & ~XID_SPLIT_MOD);
 }
 
+void XRRSetCrtcGamma(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma) {
+	if(crtc & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRSetCrtcGamma(dpy, crtc, gamma);
+}
+
 Status XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs) {
 	if(crtc & XID_SPLIT_MOD) {
 		return 0;
 	}
 	return _XRRSetCrtcConfig(dpy, resources, crtc, timestamp, x, y, mode, rotation, outputs, noutputs);
+}
+
+void XRRSetCrtcTransform (Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams) {
+	if(crtc & XID_SPLIT_MOD) {
+		return;
+	}
+	_XRRSetCrtcTransform(dpy, crtc, transform, filter, params, nparams);
+}
+
+Status XRRSetPanning(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning) {
+	if(crtc & XID_SPLIT_MOD) {
+		return 0;
+	}
+	return _XRRSetPanning(dpy, resources, crtc, panning);
 }
