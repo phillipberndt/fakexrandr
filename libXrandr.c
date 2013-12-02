@@ -27,23 +27,23 @@ static XRROutputInfo *(*_XRRGetOutputInfo)(Display *dpy, XRRScreenResources *res
 static XRRCrtcInfo *(*_XRRGetCrtcInfo)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc);
 static XRRScreenResources *(*_XRRGetScreenResources)(Display *dpy, Window window);
 static XRRPanning *(*_XRRGetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc);
-XRRCrtcGamma *(*_XRRGetCrtcGamma)(Display *dpy, RRCrtc crtc);
-Status (*_XRRGetCrtcTransform)(Display	*dpy, RRCrtc crtc, XRRCrtcTransformAttributes **attributes);
-int (*_XRRGetCrtcGammaSize)(Display *dpy, RRCrtc crtc);
-Status (*_XRRSetCrtcConfig)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs);
-Atom *(*_XRRListOutputProperties)(Display *dpy, RROutput output, int *nprop);
-XRRPropertyInfo *(*_XRRQueryOutputProperty)(Display *dpy, RROutput output, Atom property);
-void (*_XRRConfigureOutputProperty)(Display *dpy, RROutput output, Atom property, Bool pending, Bool range, int num_values, long *values);
-void (*_XRRChangeOutputProperty)(Display *dpy, RROutput output, Atom property, Atom type, int format, int mode, _Xconst unsigned char *data, int nelements);
-void (*_XRRDeleteOutputProperty)(Display *dpy, RROutput output, Atom property);
-int (*_XRRGetOutputProperty)(Display *dpy, RROutput output, Atom property, long offset, long length, Bool _delete,
+static XRRCrtcGamma *(*_XRRGetCrtcGamma)(Display *dpy, RRCrtc crtc);
+static Status (*_XRRGetCrtcTransform)(Display *dpy, RRCrtc crtc, XRRCrtcTransformAttributes **attributes);
+static int (*_XRRGetCrtcGammaSize)(Display *dpy, RRCrtc crtc);
+static Status (*_XRRSetCrtcConfig)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs);
+static Atom *(*_XRRListOutputProperties)(Display *dpy, RROutput output, int *nprop);
+static XRRPropertyInfo *(*_XRRQueryOutputProperty)(Display *dpy, RROutput output, Atom property);
+static void (*_XRRConfigureOutputProperty)(Display *dpy, RROutput output, Atom property, Bool pending, Bool range, int num_values, long *values);
+static void (*_XRRChangeOutputProperty)(Display *dpy, RROutput output, Atom property, Atom type, int format, int mode, _Xconst unsigned char *data, int nelements);
+static void (*_XRRDeleteOutputProperty)(Display *dpy, RROutput output, Atom property);
+static int (*_XRRGetOutputProperty)(Display *dpy, RROutput output, Atom property, long offset, long length, Bool _delete,
 	Bool pending, Atom req_type, Atom *actual_type, int *actual_format, unsigned long *nitems, unsigned long *bytes_after, unsigned char **prop);
-void (*_XRRAddOutputMode)(Display *dpy, RROutput output, RRMode mode);
-void (*_XRRDeleteOutputMode )(Display *dpy, RROutput output, RRMode mode);
-void (*_XRRSetOutputPrimary)(Display *dpy, Window window, RROutput output);
-void (*_XRRSetCrtcGamma)(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma);
-void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams);
-Status (*_XRRSetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning);
+static void (*_XRRAddOutputMode)(Display *dpy, RROutput output, RRMode mode);
+static void (*_XRRDeleteOutputMode )(Display *dpy, RROutput output, RRMode mode);
+static void (*_XRRSetOutputPrimary)(Display *dpy, Window window, RROutput output);
+static void (*_XRRSetCrtcGamma)(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma);
+static void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams);
+static Status (*_XRRSetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning);
 
 static void _init() __attribute__((constructor));
 static void _init() {
