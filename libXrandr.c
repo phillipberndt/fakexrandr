@@ -45,6 +45,15 @@ static void (*_XRRSetCrtcGamma)(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma);
 static void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams);
 static Status (*_XRRSetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning);
 
+static void (*_XRRFreeScreenResources)(XRRScreenResources *resources);
+static void (*_XRRFreeCrtcInfo)(XRRCrtcInfo *crtcInfo);
+static Bool (*_XRRQueryExtension)(Display *dpy, int *event_base_return, int *error_base_return);
+static Status (*_XRRQueryVersion)(Display *dpy, int *major_version_return, int *minor_version_return);
+static void (*_XRRSelectInput)(Display *dpy, Window window, int mask);
+static RROutput (*_XRRGetOutputPrimary)(Display *dpy, Window window);
+static int (*_XRRUpdateConfiguration)(XEvent *event);
+static void (*_XRRFreeOutputInfo)(XRROutputInfo *outputInfo);
+
 static void _init() __attribute__((constructor));
 static void _init() {
 	void *xrandr_lib = dlopen(REAL_XRANDR_LIB, RTLD_LAZY | RTLD_GLOBAL);
@@ -70,6 +79,14 @@ static void _init() {
 	_XRRSetCrtcGamma = dlsym(xrandr_lib, "XRRSetCrtcGamma");
 	_XRRSetCrtcTransform  = dlsym(xrandr_lib, "XRRSetCrtcTransform ");
 	_XRRSetPanning = dlsym(xrandr_lib, "XRRSetPanning");
+	_XRRFreeScreenResources = dlsym(xrandr_lib, "XRRFreeScreenResources");
+	_XRRFreeCrtcInfo = dlsym(xrandr_lib, "XRRFreeCrtcInfo");
+	_XRRQueryExtension = dlsym(xrandr_lib, "XRRQueryExtension");
+	_XRRQueryVersion = dlsym(xrandr_lib, "XRRQueryVersion");
+	_XRRSelectInput = dlsym(xrandr_lib, "XRRSelectInput");
+	_XRRGetOutputPrimary = dlsym(xrandr_lib, "XRRGetOutputPrimary");
+	_XRRUpdateConfiguration = dlsym(xrandr_lib, "XRRUpdateConfiguration");
+	_XRRFreeOutputInfo = dlsym(xrandr_lib, "XRRFreeOutputInfo");
 }
 
 static bool check_if_crtc_is_wrong(Display *dpy, XRRScreenResources *resources, RRCrtc crtc) {
@@ -316,4 +333,36 @@ Status XRRSetPanning(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, X
 		return 0;
 	}
 	return _XRRSetPanning(dpy, resources, crtc, panning);
+}
+
+void XRRFreeScreenResources(XRRScreenResources *resources) {
+	return _XRRFreeScreenResources(resources);
+}
+
+void XRRFreeCrtcInfo(XRRCrtcInfo *crtcInfo) {
+	return _XRRFreeCrtcInfo(crtcInfo);
+}
+
+Bool XRRQueryExtension(Display *dpy, int *event_base_return, int *error_base_return) {
+	return _XRRQueryExtension(dpy, event_base_return, error_base_return);
+}
+
+Status XRRQueryVersion(Display *dpy, int *major_version_return, int *minor_version_return) {
+	return _XRRQueryVersion(dpy, major_version_return, minor_version_return);
+}
+
+void XRRSelectInput(Display *dpy, Window window, int mask) {
+	return _XRRSelectInput(dpy, window, mask);
+}
+
+RROutput XRRGetOutputPrimary(Display *dpy, Window window) {
+	return _XRRGetOutputPrimary(dpy, window);
+}
+
+int XRRUpdateConfiguration(XEvent *event) {
+	return _XRRUpdateConfiguration(event);
+}
+
+void XRRFreeOutputInfo(XRROutputInfo *outputInfo) {
+	return _XRRFreeOutputInfo(outputInfo);
 }
