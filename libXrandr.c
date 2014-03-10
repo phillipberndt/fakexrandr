@@ -42,7 +42,7 @@ static void (*_XRRAddOutputMode)(Display *dpy, RROutput output, RRMode mode);
 static void (*_XRRDeleteOutputMode )(Display *dpy, RROutput output, RRMode mode);
 static void (*_XRRSetOutputPrimary)(Display *dpy, Window window, RROutput output);
 static void (*_XRRSetCrtcGamma)(Display *dpy, RRCrtc crtc, XRRCrtcGamma *gamma);
-static void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams);
+static void (*_XRRSetCrtcTransform )(Display *dpy, RRCrtc crtc, XTransform *transform, _Xconst char *filter, XFixed *params, int nparams);
 static Status (*_XRRSetPanning)(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, XRRPanning *panning);
 
 static void (*_XRRFreeScreenResources)(XRRScreenResources *resources);
@@ -321,7 +321,7 @@ Status XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc
 	return _XRRSetCrtcConfig(dpy, resources, crtc, timestamp, x, y, mode, rotation, outputs, noutputs);
 }
 
-void XRRSetCrtcTransform (Display *dpy, RRCrtc crtc, XTransform *transform, char *filter, XFixed *params, int nparams) {
+void XRRSetCrtcTransform (Display *dpy, RRCrtc crtc, XTransform *transform, _Xconst char *filter, XFixed *params, int nparams) {
 	if(crtc & XID_SPLIT_MOD) {
 		return;
 	}
