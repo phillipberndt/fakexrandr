@@ -8,11 +8,7 @@
 #include <assert.h>
 #include <string.h>
 
-/* Change this: */
-#define SPLIT_SCREEN_HEIGHT 1050
-#define SPLIT_SCREEN_WIDTH  3360
-#define REAL_XRANDR_LIB "/usr/lib/x86_64-linux-gnu/libXrandr.so"
-/* -- */
+#include "config.h"
 
 #define XID_SPLIT_MOD 0xf00000
 

@@ -28,15 +28,22 @@ right now can not do more than split the monitor vertically in half.
 Installation
 ------------
 
-Adjust the `#DEFINE` lines at the top of libXrandr.c to your configuration. The
-library will split the first screen it finds which has the resolution you
-supply there vertically in two. You might also have to adjust the path to the
-real libXrandr.so file.
+There now is a configure script which should do most of the work for you. Simply
+run `make`, it calls `./configure` automatically for you. The script tries to autodetermine
+the appropriate resolution and real/fake library locations from xrandr. `make install`
+as root installs the library. Pay attention to any warnings/errors from the configure
+script. To compile the library, you will need the XRandR and X11 development packages
+for your distribution.
 
-Then compile using `make`. You will need the XRandR and X11 development packages
-for your distribution. Place the resulting library file and symlink in a library
-directory of higer priority, as `/usr/local/lib`. Run `ldconfig` to update the
-ld cache.
+If you need fakexrandr for another use case, I trust that you are able to figure out
+how to write your own `config.h` file. Here's some details for manual building:
+
+The library will split the first screen it finds which has the resolution you
+supply in `config.h` vertically in two. You might have to adjust the path to the
+real libXrandr.so file. Place the resulting library file and symlink in a library
+directory of higer priority, as `/usr/local/lib`. Check `ldconfig -v` for a list of
+of suitable directories. Run `ldconfig` to update the ld cache. If it's working, `xrandr`
+should show you a third screen, with a name ending in an underscore.
 
 Enjoy :-)
 
@@ -44,7 +51,7 @@ Enjoy :-)
 To do
 -----
 
-* Make this configurable, allow more than one split, allow horizontal and not-in-half splits
+* Make this run-time configurable, allow more than one split, allow horizontal and not-in-half splits
 * I have a memory leak in the `append_fake_`-methods which I don't know how to
   fix right now: I can't free the old allocated space for some reason, so it is
   likely mine is not freed either..
