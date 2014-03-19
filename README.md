@@ -52,9 +52,6 @@ To do
 -----
 
 * Make this run-time configurable, allow more than one split, allow horizontal and not-in-half splits
-* I have a memory leak in the `append_fake_`-methods which I don't know how to
-  fix right now: I can't free the old allocated space for some reason, so it is
-  likely mine is not freed either..
 
 See also
 --------
