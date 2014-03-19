@@ -11,11 +11,16 @@ unset IFS
 
 # 2) Determine path to real xrandr library
 REAL_LIBRARY=$(ldd `which xrandr` | sed -nre 's/.+libXrandr.so.+=> ([^ ]+).*/\1/p')
-REAL_LIBRARY_DIR=$(dirname "${REAL_LIBRARY}")
 echo "The path to the real XRandR library is ${REAL_LIBRARY}"
 if echo "${REAL_LIBRARY}" | grep -q local; then
 	echo -e "\033[31mWARNING: \033[0m This looks as if you already have fakexrandr installed?!"
+	REAL_LIBRARY=$(find /usr/lib -name libXrandr.so | head -n 1)
+	if [ -z ${REAL_LIBRARY} ]; then
+		exit 1
+	fi
+	echo "Using ${REAL_LIBRARY} instead. (Found using \`file')"
 fi
+REAL_LIBRARY_DIR=$(dirname "${REAL_LIBRARY}")
 
 # 3) Determine screen resolution from xrandr utility
 WIDTH_AND_HEIGHT=($(
@@ -58,7 +63,6 @@ if [ -z "${FAKE_LIBRARY_DIRECTORY}" ]; then
 	exit 1
 fi
 echo "The fake library will be installed to ${FAKE_LIBRARY_DIRECTORY}"
-
 echo
 echo "I will write a file config.h such that when you set your resolution to that resolution,"
 echo "the monitor is virtually split into two, each half the original's size."
