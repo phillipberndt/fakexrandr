@@ -149,3 +149,17 @@ XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc 
 
 	return retval;
 }
+
+int XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs) {
+	int i;
+	if(crtc & XID_SPLIT_MOD) {
+		return 0;
+	}
+	for(i=0; i<noutputs; i++) {
+		if(outputs[i] & XID_SPLIT_MOD) {
+			return 0;
+		}
+	}
+
+	return _XRRSetCrtcConfig(dpy, resources, crtc, timestamp, x, y, mode, rotation, outputs, noutputs);
+}
