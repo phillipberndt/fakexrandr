@@ -10,7 +10,7 @@ libXrandr.so: libXrandr.c config.h skeleton.h
 	$(CC) -fPIC -shared -o $@ $<
 
 libXrandr.so.2: libXrandr.so
-	ln -s $< $@
+	[ -e $@ ] || ln -s $< $@
 
 install: libXrandr.so
 	TARGET_DIR=`sed -nre 's/#define FAKEXRANDR_INSTALL_DIR "([^"]+)"/\1/p' config.h`; \
