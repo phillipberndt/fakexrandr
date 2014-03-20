@@ -16,9 +16,10 @@ if echo "${REAL_LIBRARY}" | grep -q local; then
 	echo -e "\033[31mWARNING: \033[0m This looks as if you already have fakexrandr installed?!"
 	REAL_LIBRARY=$(find /usr/lib -name libXrandr.so | head -n 1)
 	if [ -z ${REAL_LIBRARY} ]; then
+		echo "          Aborting: No other candidate was found in /usr/lib"
 		exit 1
 	fi
-	echo "Using ${REAL_LIBRARY} instead. (Found using \`file')"
+	echo "          Using ${REAL_LIBRARY} instead. (Found using \`file')"
 fi
 REAL_LIBRARY_DIR=$(dirname "${REAL_LIBRARY}")
 
@@ -33,7 +34,7 @@ WIDTH_AND_HEIGHT=($(
 		fi
 	done | tail -n 1
 ))
-echo "Maximal resolution determined as ${WIDTH_AND_HEIGHT[0]}x${WIDTH_AND_HEIGHT[1]}"
+echo -e "\033[1mMaximal resolution determined as ${WIDTH_AND_HEIGHT[0]}x${WIDTH_AND_HEIGHT[1]}\033[0m"
 
 # 4) Determine location for fake xrandr library
 LIBRARY_DIRECTORIES=($(ldconfig -v 2>/dev/null | grep -oE '^/[^:]+'))
@@ -64,8 +65,8 @@ if [ -z "${FAKE_LIBRARY_DIRECTORY}" ]; then
 fi
 echo "The fake library will be installed to ${FAKE_LIBRARY_DIRECTORY}"
 echo
-echo "I will write a file config.h such that when you set your resolution to that resolution,"
-echo "the monitor is virtually split into two, each half the original's size."
+echo -e "\033[1mI will write a file config.h such that when you set your resolution to that resolution,"
+echo -e "the monitor is virtually split into two, each half the original's size.\033[0m"
 echo
 
 cat > config.h <<EOF
