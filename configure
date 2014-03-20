@@ -23,20 +23,7 @@ if echo "${REAL_LIBRARY}" | grep -q local; then
 fi
 REAL_LIBRARY_DIR=$(dirname "${REAL_LIBRARY}")
 
-# 3) Determine screen resolution from xrandr utility
-WIDTH_AND_HEIGHT=($(
-	M=0
-	xrandr | grep -oE "[0-9]+x[0-9]+" | tr 'x' ' ' | while read W H; do
-		S=$[$W * $H]
-		if [ $S -gt $M ]; then
-			M=$S
-			echo $W $H
-		fi
-	done | tail -n 1
-))
-echo -e "\033[1mMaximal resolution determined as ${WIDTH_AND_HEIGHT[0]}x${WIDTH_AND_HEIGHT[1]}\033[0m"
-
-# 4) Determine location for fake xrandr library
+# 3) Determine location for fake xrandr library
 LIBRARY_DIRECTORIES=($(ldconfig -v 2>/dev/null | grep -oE '^/[^:]+'))
 FAKE_LIBRARY_DIRECTORY=
 CANDIDATES=
@@ -64,6 +51,20 @@ if [ -z "${FAKE_LIBRARY_DIRECTORY}" ]; then
 	exit 1
 fi
 echo "The fake library will be installed to ${FAKE_LIBRARY_DIRECTORY}"
+
+# 4) Determine screen resolution from xrandr utility
+WIDTH_AND_HEIGHT=($(
+	M=0
+	xrandr | grep -oE "[0-9]+x[0-9]+" | tr 'x' ' ' | while read W H; do
+		S=$[$W * $H]
+		if [ $S -gt $M ]; then
+			M=$S
+			echo $W $H
+		fi
+	done | tail -n 1
+))
+echo -e "\033[1mMaximal resolution determined as ${WIDTH_AND_HEIGHT[0]}x${WIDTH_AND_HEIGHT[1]}\033[0m"
+
 echo
 echo -e "\033[1mI will write a file config.h such that when you set your resolution to that resolution,"
 echo -e "the monitor is virtually split into two, each half the original's size.\033[0m"
