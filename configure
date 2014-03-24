@@ -9,6 +9,9 @@ fi
 echo "XRandR version is ${XRANDR_VERSION[*]}"
 unset IFS
 
+# For convenience: Check if Xlib headers are present
+pkg-config --exists x11 || exit 1
+
 # 2) Determine path to real xrandr library
 REAL_LIBRARY=$(ldd `which xrandr` | sed -nre 's/.+libXrandr.so.+=> ([^ ]+).*/\1/p')
 echo "The path to the real XRandR library is ${REAL_LIBRARY}"
