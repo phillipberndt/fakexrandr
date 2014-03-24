@@ -28,25 +28,49 @@ right now can not do more than split the monitor vertically in half.
 Installation
 ------------
 
-There now is a configure script which should do most of the work for you. Simply
-run `make`, it calls `./configure` automatically for you. The script tries to autodetermine
-the appropriate resolution and real/fake library locations from xrandr. `make install`
-as root installs the library. Pay attention to any warnings/errors from the configure
-script. To compile the library, you will need the XRandR and X11 development packages
-for your distribution.
+In most cases, simply run `make`, then install using `make install`. This will
+create a configuration which splits a monitor with the largest possible
+resolution that `xrandr` outputs at compile time into two virtual monitors. Pay
+attention to any warnings/errors from the configure script. To compile the
+library, you will need the XRandR and X11 development packages for your
+distribution.
 
-If you need fakexrandr for another use case, I trust that you are able to figure out
-how to write your own `config.h` file. Here's some details for manual building:
+Manual installation
+-------------------
 
-The library will split the first screen it finds which has the resolution you
-supply in `config.h` vertically in two. You might have to adjust the path to the
-real libXrandr.so file. Place the resulting library file and symlink in a library
-directory of higer priority, as `/usr/local/lib`. Check `ldconfig -v` for a list of
-of suitable directories. Run `ldconfig` to update the ld cache. If it's working, `xrandr`
-should show you a third screen, with a name ending in an underscore.
+If you need FakeXRandR for another use case or the automated building does not
+work for you, here are some details:
 
-Enjoy :-)
+The `configure` script runs `xrandr` and creates a `config.h` header with the
+resolution of the monitor to split, the path to the system's real `libXrandr.so`
+file and a path which preceeds that of the real library in the ld search path,
+where the FakeXRandR should be placed. You can use `ldconfig -v` to get a list
+of suitable directories, if `configure` should fail to determine one.
 
+The `libXrandr.c` file only contains a initialization function which loads the
+symbols from the real library and implementations of the functions that we
+actually override and which require more than replacement of XIDs for fake
+screens with real the one's. All other functions are automatically generated
+by `make_skeleton.py` from the default Xrandr header file.
+
+FAQ
+---
+
+* **How can I see if it's working?**<br/>
+  Run `ldd xrandr`. `libXrandr.so` should show up in `/usr/local/lib`. Then,
+  start `xrandr`. The screen which is set to the resolution supplied in
+  `config.h` should show up twice, with the last character in the name of the
+  duplicate replaced by an underscore. After you restarted your X11 session,
+  fullscreening applications should fullscreen to the virtual screen, not the
+  physical one.
+* **Changing settings of the fake screen doesn't have any effect?!**<br/>
+  XRandR is only used to *communicate* information on the resolution and output
+  settings between X11 server, graphics driver and applications. It is up to
+  the graphics driver to actually *apply* any settings. Since FakeXRandR
+  only hooks into the X11 ↔ application communication, attempts to change
+  settings for fake screens won't have any effect.
+* **My two screens are mirrored. Does this library help?**<br/>
+  No. See the FAQ in the Gist for FakeXinerama (see "See also" section).
 
 To do
 -----
