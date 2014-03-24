@@ -37,7 +37,7 @@
 #include "skeleton.h"
 
 /*
-	To avoid memory leaks, we simply use a two big buffers to
+	To avoid memory leaks, we simply use two big buffers to
 	store the fake data
 */
 static char fake_output_buffer[sizeof(RRCrtc) * 255];
