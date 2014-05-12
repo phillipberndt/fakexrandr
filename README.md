@@ -35,6 +35,10 @@ attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
 distribution.
 
+For **Arch Linux**, there is a [PKGBUILD](https://aur.archlinux.org/packages/fakexrandr-git/)
+([git](https://github.com/pschmitt/aur-fakexrandr-git)) by
+[Philipp Schmitt](https://github.com/pschmitt).
+
 Manual installation
 -------------------
 
