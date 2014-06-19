@@ -232,14 +232,15 @@ class Configuration(object):
         return other.edid == self.edid
 
     def __str__(self):
-        return "".join([struct.pack("128s256sII", self.name, self.edid, self.width, self.height), self.splits_str])
+        assert len(self.edid) == 512
+        return "".join([struct.pack("128s512sII", self.name, self.edid, self.width, self.height), self.splits_str])
 
     @classmethod
     def new_from_str(cls, string):
         obj = cls.__new__(cls)
-        obj.name, obj.edid, obj.width, obj.height = struct.unpack("128s256sII", string[:128+256+4*2])
+        obj.name, obj.edid, obj.width, obj.height = struct.unpack("128s512sII", string[:128+512+4*2])
         obj.name = obj.name[:obj.name.index("\x00")]
-        obj.splits_str = string[128+256+4*2:]
+        obj.splits_str = string[128+512+4*2:]
         obj.height = float(obj.height)
         obj.width = float(obj.width)
         return obj
@@ -338,7 +339,8 @@ class ConfigurationWidget(Gtk.HBox):
                 event.x = 150.
             if abs(event.y - 150. / self._aspect_ratio) < 10:
                 event.y = 150. / self._aspect_ratio
-            self.set_info("(%d, %d)" % (event.x / 300. * self._configuration.width, event.y / 300. * self._aspect_ratio * self._configuration.height))
+            self.set_info("(%dpx, %dpx) = (%d%%, %d%%)" % (event.x / 300. * self._configuration.width, event.y / 300. * self._aspect_ratio * self._configuration.height,
+                                                           event.x / 3., event.y / 3. * self._aspect_ratio))
             if self._mouse_handler_decision == 3:
                 self._mouse_handler_alter_in[0][1] = event.x / 300. * self._configuration.width - base_coordinates(self._mouse_handler_alter_in)[0]
             elif self._mouse_handler_decision == 4:
@@ -360,6 +362,7 @@ class ConfigurationWidget(Gtk.HBox):
 
     def canvas_mouse_button_handler(self, state, widget, event):
         if state == 1:
+            self._mouse_handler_decision = -1.
             self._mouse_handler_mouse_down_at = (event.x, event.y)
             mouse_x = self._mouse_handler_mouse_down_at[0] / 300. * self._configuration.width
             mouse_y = self._mouse_handler_mouse_down_at[1] / 300. * self._aspect_ratio * self._configuration.height
@@ -405,10 +408,13 @@ class ConfigurationWidget(Gtk.HBox):
 
             if xdiff < 10 and ydiff < 10 and self._mouse_handler_decision == 5:
                 # Remove edge
-                replacer = self._mouse_handler_alter_in[0][2]
-                while len(self._mouse_handler_alter_in[0]):
-                    self._mouse_handler_alter_in[0].pop()
-                self._mouse_handler_alter_in[0] += replacer
+                try:
+                    replacer = self._mouse_handler_alter_in[0][2]
+                    while len(self._mouse_handler_alter_in[0]):
+                        self._mouse_handler_alter_in[0].pop()
+                    self._mouse_handler_alter_in[0] += replacer
+                except IndexError:
+                    pass
                 self.queue_draw()
             self._mouse_handler_mouse_down_at = False
             self.set_info("")
