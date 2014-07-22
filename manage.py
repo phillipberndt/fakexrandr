@@ -18,7 +18,7 @@ import sys
 
     <store>         := <configuration length: 4 bytes unsigned native byte order length of the configuration> <configuration>
 
-    <configuration> := <name of the configuration: 128 characters, zero padded> <edid for configuration: 256 characters> <width: 4 bytes unsigned native byte order> <height: see width> <splits>
+    <configuration> := <name of the configuration: 128 characters, zero padded> <edid for configuration: 512 characters> <width: 4 bytes unsigned native byte order> <height: see width> <splits>
 
     <splits>        := (("H"|"V") <position of the split: see width> <splits> <splits>)
                      | "N"
@@ -232,13 +232,16 @@ class Configuration(object):
         return other.edid == self.edid
 
     def __str__(self):
-        assert len(self.edid) == 512
+        assert len(self.edid) <= 512
+        assert len(self.name) <= 128
         return "".join([struct.pack("128s512sII", self.name, self.edid, self.width, self.height), self.splits_str])
 
     @classmethod
     def new_from_str(cls, string):
         obj = cls.__new__(cls)
         obj.name, obj.edid, obj.width, obj.height = struct.unpack("128s512sII", string[:128+512+4*2])
+        if "\x00" in obj.edid:
+            obj.edid = obj.edid[:obj.edid.index("\x00")]
         obj.name = obj.name[:obj.name.index("\x00")]
         obj.splits_str = string[128+512+4*2:]
         obj.height = float(obj.height)
@@ -339,7 +342,7 @@ class ConfigurationWidget(Gtk.HBox):
                 event.x = 150.
             if abs(event.y - 150. / self._aspect_ratio) < 10:
                 event.y = 150. / self._aspect_ratio
-            self.set_info("(%dpx, %dpx) = (%d%%, %d%%)" % (event.x / 300. * self._configuration.width, event.y / 300. * self._aspect_ratio * self._configuration.height,
+            self.set_info("(%04dpx, %04dpx) = (%02d%%, %02d%%)" % (event.x / 300. * self._configuration.width, event.y / 300. * self._aspect_ratio * self._configuration.height,
                                                            event.x / 3., event.y / 3. * self._aspect_ratio))
             if self._mouse_handler_decision == 3:
                 self._mouse_handler_alter_in[0][1] = event.x / 300. * self._configuration.width - base_coordinates(self._mouse_handler_alter_in)[0]
@@ -457,7 +460,7 @@ class MainWindow(Gtk.Window):
         self.displays_combo_store.clear()
         self._displays_order = []
         for name, output in self._displays.items():
-            verbose_name = "{name}@{crtc[width]}x{crtc[height]} (edid={edidS}...{edidE})".format(name=name, crtc=output["crtc"], edidS=output["edid"][:10], edidE=output["edid"][-10:])
+            verbose_name = "{name}@{crtc[width]:d}x{crtc[height]:d} (edid={edidS}...{edidE})".format(name=name, crtc=output["crtc"], edidS=output["edid"][:10], edidE=output["edid"][-10:])
             self.displays_combo_store.append((name, verbose_name))
             self._displays_order.append(name)
         self.combo_box.set_active(0)
