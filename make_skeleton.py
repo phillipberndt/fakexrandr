@@ -39,7 +39,7 @@ for function in functions:
             continue
         if x[0] in ("RRCrtc", "RROutput"):
             actions.append(
-                " {param} = {param} & ~XID_SPLIT_MOD;".format(param=param))
+                " {param} = {param} & ~XID_SPLIT_MASK;".format(param=param))
 
     if re.search("(?<!_){}".format(name), ccode):
         print(("static {ret} (*_{fn})({par_def});\n".format(
