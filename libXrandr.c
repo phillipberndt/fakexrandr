@@ -127,9 +127,10 @@ static XRRScreenResources *augment_resources(Display *dpy, Window window, XRRScr
 		}
 	}
 
-	/* find and correct the mode info, this is purely for completeness, the
-	virtual display areas already work as intended, but this corrects the
-	output shown by 'xrandr' for individual screen sizes.
+	/*
+		Find and correct the mode info, this is purely for completeness, the
+		virtual display areas already work as intended, but this corrects the
+		output shown by 'xrandr' for individual screen sizes.
 	*/
 	for(i = 0; i < retval->nmode; i++) {
 		XRRModeInfo *mi = &retval->modes[i];
@@ -140,8 +141,10 @@ static XRRScreenResources *augment_resources(Display *dpy, Window window, XRRScr
 			mi->hTotal     /= (EXTRA_SCREENS + 1);
 			mi->dotClock   /= (EXTRA_SCREENS + 1);
 
-			/* There will always be enough room to write the new name as the number will
-			always be lower then the original, and thus equal or shorter in length. */
+			/*
+				There will always be enough room to write the new name as the number will
+				always be lower then the original, and thus equal or shorter in length.
+			*/
 			snprintf(mi->name, mi->nameLength + 1, "%ux%u", mi->width, mi->height);
 			break;
 		}
