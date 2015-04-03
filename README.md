@@ -17,6 +17,7 @@ Authors
 
 * Phillip Berndt
 * Geoffrey 'gnif' McRae
+* Gerry Demaret
 
 Use cases
 ---------
