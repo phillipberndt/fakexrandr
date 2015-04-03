@@ -174,7 +174,7 @@ XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RRO
 		retval->mm_width /= (EXTRA_SCREENS + 1);
 		if(output & XID_SPLIT_MASK) {
 			int fake_number = (output >> XID_SPLIT_SHIFT);
-			char *output_name = fake_output_buffer + fake_number * 255;
+			char *output_name = fake_output_name_buffer + fake_number * 255;
 			snprintf(output_name, 255, "%.200s~%d", retval->name, fake_number);
 			retval->name = output_name;
 			append_fake_crtc(&retval->ncrtc, &retval->crtcs, retval->crtc, EXTRA_SCREENS);
