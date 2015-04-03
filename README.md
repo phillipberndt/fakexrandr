@@ -70,9 +70,9 @@ FAQ
 * **How can I see if it's working?**<br/>
   Run `ldd xrandr`. `libXrandr.so` should show up in `/usr/local/lib`. Then,
   start `xrandr`. The screen which is set to the resolution supplied in
-  `config.h` should show up twice, with the last character in the name of the
-  duplicate replaced by a number. After you restarted your X11 session,
-  fullscreening applications should fullscreen to the virtual screen, not the
+  `config.h` should show up twice, with the duplicate having an appended `~1`
+  in the end. After you restarted your X11 session, fullscreening applications
+  using Xrandr (e.g. GTK apps) should fullscreen to the virtual screen, not the
   physical one.
 * **Changing settings of the fake screen doesn't have any effect?!**<br/>
   XRandR is only used to *communicate* information on the resolution and output
