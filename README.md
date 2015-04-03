@@ -64,7 +64,7 @@ FAQ
   Run `ldd xrandr`. `libXrandr.so` should show up in `/usr/local/lib`. Then,
   start `xrandr`. The screen which is set to the resolution supplied in
   `config.h` should show up twice, with the last character in the name of the
-  duplicate replaced by an underscore. After you restarted your X11 session,
+  duplicate replaced by a number. After you restarted your X11 session,
   fullscreening applications should fullscreen to the virtual screen, not the
   physical one.
 * **Changing settings of the fake screen doesn't have any effect?!**<br/>
