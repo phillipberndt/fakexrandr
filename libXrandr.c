@@ -112,17 +112,37 @@ static void append_fake_output(int *count, RROutput **outputs, RROutput real_out
 
 static XRRScreenResources *augment_resources(Display *dpy, Window window, XRRScreenResources *retval) {
 	int i;
-	for(i=0; i<retval->ncrtc; i++) {
+	for(i = 0; i < retval->ncrtc; i++) {
 		if(check_if_crtc_is_wrong(dpy, retval, retval->crtcs[i])) {
 			/* Add a second crtc (becomes the virtual split screen) */
 			append_fake_crtc(&retval->ncrtc, &retval->crtcs, retval->crtcs[i], EXTRA_SCREENS);
 			break;
 		}
 	}
-	for(i=0; i<retval->noutput; i++) {
+	for(i = 0; i < retval->noutput; i++) {
 		if(check_if_output_is_wrong(dpy, retval, retval->outputs[i])) {
 			/* Add a second output (becomes the virtual split screen) */
 			append_fake_output(&retval->noutput, &retval->outputs, retval->outputs[i], EXTRA_SCREENS);
+			break;
+		}
+	}
+
+	/* find and correct the mode info, this is purely for completeness, the
+	virtual display areas already work as intended, but this corrects the
+	output shown by 'xrandr' for individual screen sizes.
+	*/
+	for(i = 0; i < retval->nmode; i++) {
+		XRRModeInfo *mi = &retval->modes[i];
+		if (mi->width == SPLIT_SCREEN_WIDTH && mi->height == SPLIT_SCREEN_HEIGHT) {
+			mi->width      /= (EXTRA_SCREENS + 1);
+			mi->hSyncStart /= (EXTRA_SCREENS + 1);
+			mi->hSyncEnd   /= (EXTRA_SCREENS + 1);
+			mi->hTotal     /= (EXTRA_SCREENS + 1);
+			mi->dotClock   /= (EXTRA_SCREENS + 1);
+
+			/* There will always be enough room to write the new name as the number will
+			always be lower then the original, and thus equal or shorter in length. */
+			snprintf(mi->name, mi->nameLength + 1, "%ux%u", mi->width, mi->height);
 			break;
 		}
 	}
