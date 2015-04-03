@@ -77,14 +77,14 @@ static void append_fake_crtc(int *count, RRCrtc **crtcs, RRCrtc real_crtc, int a
 	assert((real_crtc & XID_SPLIT_MASK) == 0L);
 	assert(sizeof(RRCrtc) * (*count + append) < sizeof(fake_crtc_buffer));
 
-	int a;
 	RRCrtc *new_space = (RRCrtc *)fake_crtc_buffer;
 	memcpy(fake_crtc_buffer, *crtcs, sizeof(RRCrtc) * (*count));
 
 	int index = (*count);
-	for(a = 1; a <= append; ++a, ++index) {
+	int i;
+	for(i = 1; i <= append; ++i, ++index) {
 		memcpy(&fake_crtc_buffer[sizeof(RRCrtc) * index], *crtcs, sizeof(RRCrtc));
-		new_space[index] = real_crtc | (a << XID_SPLIT_SHIFT);
+		new_space[index] = real_crtc | (i << XID_SPLIT_SHIFT);
 	}
 
 	(*count) += append;
@@ -95,14 +95,14 @@ static void append_fake_output(int *count, RROutput **outputs, RROutput real_out
 	assert((real_output & XID_SPLIT_MASK) == 0L);
 	assert(sizeof(RROutput) * (*count + append) < sizeof(fake_output_buffer));
 
-	int a;
 	RRCrtc *new_space = (RRCrtc *)fake_output_buffer;
 	memcpy(fake_output_buffer, *outputs, sizeof(RROutput) * (*count));
 
 	int index = (*count);
-	for(a = 1; a <= append; ++a, ++index) {
+	int i;
+	for(i = 1; i <= append; ++i, ++index) {
 		memcpy(&fake_output_buffer[sizeof(RROutput) * index], *outputs, sizeof(RROutput));
-		new_space[index] = real_output | (a << XID_SPLIT_SHIFT);
+		new_space[index] = real_output | (i << XID_SPLIT_SHIFT);
 	}
 
 	(*count) += append;
@@ -199,10 +199,10 @@ XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc 
 }
 
 int XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs) {
-	int i;
 	if(crtc & XID_SPLIT_MASK) {
 		return 0;
 	}
+	int i;
 	for(i=0; i<noutputs; i++) {
 		if(outputs[i] & XID_SPLIT_MASK) {
 			return 0;
