@@ -148,7 +148,7 @@ XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RRO
 	XRROutputInfo *retval = _XRRGetOutputInfo(dpy, resources, output & ~XID_SPLIT_MASK);
 
 	if(check_if_output_is_wrong(dpy, resources, output)) {
-		retval->mm_width /= 3;
+		retval->mm_width /= (EXTRA_SCREENS + 1);
 		if(output & XID_SPLIT_MASK) {
 			retval->name[retval->nameLen - 1] = (output >> XID_SPLIT_SHIFT) + 48;
 			append_fake_crtc(&retval->ncrtc, &retval->crtcs, retval->crtc, EXTRA_SCREENS);
@@ -163,7 +163,7 @@ XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc 
 	XRRCrtcInfo *retval = _XRRGetCrtcInfo(dpy, resources, crtc & ~XID_SPLIT_MASK);
 
 	if(check_if_crtc_is_wrong(dpy, resources, crtc)) {
-		retval->width /= 3;
+		retval->width /= (EXTRA_SCREENS + 1);
 		if (crtc & XID_SPLIT_MASK)
 			retval->x = ((crtc >> XID_SPLIT_SHIFT) - 1) * retval->width;
 		else	retval->x = 0;
