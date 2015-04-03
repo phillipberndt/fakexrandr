@@ -39,7 +39,8 @@ create a configuration which splits a monitor with the largest possible
 resolution that `xrandr` outputs at compile time into two virtual monitors. Pay
 attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
-distribution.
+distribution. To split the monitor into more than two screens, edit the `EXTRA_SCREENS`
+variable in the created `config.h` file.
 
 For **Arch Linux**, there is a [PKGBUILD](https://aur.archlinux.org/packages/fakexrandr-git/)
 ([git](https://github.com/pschmitt/aur-fakexrandr-git)) by
