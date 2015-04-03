@@ -80,7 +80,7 @@ static void append_fake_crtc(int *count, RRCrtc **crtcs, RRCrtc real_crtc, int a
 
 	int a;
 	RRCrtc *new_space = (RRCrtc *)fake_crtc_buffer;
-	memcpy(fake_crtc_buffer, *crtcs, sizeof(RROutput) * (*count));
+	memcpy(fake_crtc_buffer, *crtcs, sizeof(RRCrtc) * (*count));
 
 	int index = (*count);
 	for(a = 1; a <= append; ++a, ++index) {
@@ -92,9 +92,9 @@ static void append_fake_crtc(int *count, RRCrtc **crtcs, RRCrtc real_crtc, int a
 	*crtcs    = new_space;
 }
 
-static void append_fake_output(int *count, RRCrtc **outputs, RRCrtc real_output, int append) {
+static void append_fake_output(int *count, RROutput **outputs, RROutput real_output, int append) {
 	assert((real_output & XID_SPLIT_MASK) == 0L);
-	assert(sizeof(RRCrtc) * (*count + append) < sizeof(fake_output_buffer));
+	assert(sizeof(RROutput) * (*count + append) < sizeof(fake_output_buffer));
 
 	int a;
 	RRCrtc *new_space = (RRCrtc *)fake_output_buffer;
