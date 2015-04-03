@@ -12,6 +12,12 @@ You may use, redistribute and modify this program under the terms of the GNU
 General Public License (GPL) Version 3, in the version available under the URL
 http://www.gnu.org/licenses/gpl.html#.
 
+Authors
+-------
+
+* Phillip Berndt
+* Geoffrey 'gnif' McRae
+
 Use cases
 ---------
 
