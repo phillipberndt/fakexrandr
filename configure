@@ -68,9 +68,27 @@ WIDTH_AND_HEIGHT=($(
 ))
 echo -e "\033[1mMaximal resolution determined as ${WIDTH_AND_HEIGHT[0]}x${WIDTH_AND_HEIGHT[1]}\033[0m"
 
+# 5) Prompt for the number of splits wanted if the value was not provided
+if [ -z "$EXTRA_SCREENS" ]; then
+	while true; do
+		echo -e "\033[1m"
+		read -p "How many screen splits do you want? " EXTRA_SCREENS
+		case $EXTRA_SCREENS in
+			''|*[!0-9]*)
+				echo -e "\033[31mInvalid number provided.\033[0m"
+				;;
+	
+			*)
+				break;
+		esac
+	done
+fi
+
+let COUNT=$EXTRA_SCREENS+1
+let WIDTH=${WIDTH_AND_HEIGHT[0]}/$COUNT
 echo
 echo -e "\033[1mI will write a file config.h such that when you set your resolution to that resolution,"
-echo -e "the monitor is virtually split into two, each half the original's size.\033[0m"
+echo -e "the monitor is virtually split into $COUNT equal screens of $WIDTH pixels wide.\033[0m"
 echo
 
 cat > config.h <<EOF
@@ -82,7 +100,7 @@ cat > config.h <<EOF
 
 #define SPLIT_SCREEN_HEIGHT ${WIDTH_AND_HEIGHT[1]}
 #define SPLIT_SCREEN_WIDTH  ${WIDTH_AND_HEIGHT[0]}
-#define EXTRA_SCREENS 1
+#define EXTRA_SCREENS ${EXTRA_SCREENS}
 #define REAL_XRANDR_LIB "${REAL_LIBRARY}"
 #define FAKEXRANDR_INSTALL_DIR "${FAKE_LIBRARY_DIRECTORY}"
 EOF
