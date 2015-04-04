@@ -12,6 +12,13 @@ You may use, redistribute and modify this program under the terms of the GNU
 General Public License (GPL) Version 3, in the version available under the URL
 http://www.gnu.org/licenses/gpl.html#.
 
+Authors
+-------
+
+* Phillip Berndt
+* Geoffrey 'gnif' McRae
+* Gerry Demaret
+
 Use cases
 ---------
 
@@ -33,7 +40,8 @@ create a configuration which splits a monitor with the largest possible
 resolution that `xrandr` outputs at compile time into two virtual monitors. Pay
 attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
-distribution.
+distribution. To split the monitor into more than two screens, edit the `EXTRA_SCREENS`
+variable in the created `config.h` file.
 
 For **Arch Linux**, there is a [PKGBUILD](https://aur.archlinux.org/packages/fakexrandr-git/)
 ([git](https://github.com/pschmitt/aur-fakexrandr-git)) by
@@ -63,9 +71,9 @@ FAQ
 * **How can I see if it's working?**<br/>
   Run `ldd xrandr`. `libXrandr.so` should show up in `/usr/local/lib`. Then,
   start `xrandr`. The screen which is set to the resolution supplied in
-  `config.h` should show up twice, with the last character in the name of the
-  duplicate replaced by an underscore. After you restarted your X11 session,
-  fullscreening applications should fullscreen to the virtual screen, not the
+  `config.h` should show up twice, with the duplicate having an appended `~1`
+  in the end. After you restarted your X11 session, fullscreening applications
+  using Xrandr (e.g. GTK apps) should fullscreen to the virtual screen, not the
   physical one.
 * **Changing settings of the fake screen doesn't have any effect?!**<br/>
   XRandR is only used to *communicate* information on the resolution and output
