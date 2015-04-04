@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <string.h>
 
+int _is_fake_xrandr = 1;
+
 /*
 	We use this XID modifier to flag outputs and CRTCs as
 	fake by XORing with it.

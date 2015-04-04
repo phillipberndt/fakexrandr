@@ -32,12 +32,19 @@ import sys
 
 """
 
-# TODO The screens are loaded from the first available xrandr library right now, which might be fakexrandr..
-
 " Code to open Xlib via ctypes {{{ "
 try:
     libX11 = ctypes.CDLL("libX11.so")
-    libXrandr = ctypes.CDLL("libXrandr.so")
+    # Prefer Xrandr from one of the default directories over a fake version
+    for directory in ("/usr/lib/x86_64-linux-gnu/", "/usr/lib", "/lib/x86_64-linux-gnu/", "/lib", "/usr/lib/i386-linux-gnu/", "/lib/i386-linux-gnu/"):
+        Xrandr_path = os.path.join(directory, "libXrandr.so")
+        if os.path.isfile(Xrandr_path):
+            libXrandr = ctypes.CDLL(Xrandr_path)
+            break
+    else:
+        libXrandr = ctypes.CDLL("libXrandr.so")
+        if hasattr(libXrandr, "_is_fake_xrandr"):
+            print >> sys.stderr, "Warning: Failed to use the real XrandR library; falling back to the fake one."
 except:
     print >> sys.stderr, "Failed to load libX11.so and/or libXrandr.so. Are you running this from linux\n", \
         "and using cpython (or another python with the ctypes extension)?\n"
@@ -136,49 +143,6 @@ def query_xrandr():
     return outputs
 " }}} "
 
-" X Resource database access {{{ "
-# TODO
-# Storing values here is a pain -- I should either remove this code alltogether and
-# switch to a configuration file or invoke the xrdb utility
-
-class XrmValue(ctypes.Structure):
-    _fields_ = [("size", ctypes.c_uint),
-                ("addr", ctypes.c_char_p)]
-
-libX11.XrmGetStringDatabase.restype = ctypes.c_voidp
-libX11.XResourceManagerString.restype = ctypes.POINTER(ctypes.c_voidp)
-
-class Xrdb(object):
-    _database = False
-
-    def __init__(self):
-        if not Xrdb._database:
-            libX11.XrmInitialize();
-            Xrdb._database = ctypes.c_voidp();
-            Xrdb._database.value = libX11.XrmGetStringDatabase(libX11.XResourceManagerString(display));
-
-    def __getitem__(self, name):
-        val = XrmValue()
-        retval = libX11.XrmGetResource(self._database.value, name, "", ctypes.c_char_p("                   "), ctypes.byref(val))
-        if retval != 1:
-            raise KeyError
-        return val.addr
-
-    def __setitem__(self, name, value):
-        state = libX11.XrmPutStringResource(ctypes.byref(self._database), name, str(value))
-        if state != 0:
-            raise RuntimeError("Failed to store value to XResource database")
-        print libX11.XrmSetDatabase(display, self._database)
-        # TODO
-        # This doesn't store any changes yet
-
-    def __getattr__(self, name):
-        return self[name]
-
-    def __setattr__(self, name, value):
-        self[name] = value
-" }}} "
-
 " GUI {{{ "
 class Configuration(object):
     def __init__(self, name, edid, width, height):
@@ -191,18 +155,22 @@ class Configuration(object):
         self.splits = [ ]
 
     @property
+    def ascii_name(self):
+        return self.name.decode("ascii")
+
+    @property
     def splits_str(self):
         def _build(arr):
             if not arr:
-                return "N"
-            return "".join([struct.pack("=cI", arr[0], arr[1]), _build(arr[2]), _build(arr[3])])
+                return b"N"
+            return b"".join([struct.pack("=cI", arr[0], int(arr[1])), _build(arr[2]), _build(arr[3])])
         return _build(self.splits)
 
     @splits_str.setter
     def splits_str(self, istr):
         def _build(istr):
-            stype = istr[0]
-            if stype == "N":
+            stype = istr[:1]
+            if stype == b"N":
                 return [ ], istr[1:]
             pos, = struct.unpack("I", istr[1:5])
             left, istr = _build(istr[5:])
@@ -215,10 +183,10 @@ class Configuration(object):
             split = self.splits
         if not split:
             return [ split ]
-        if (y if split[0] == "H" else x) < split[1]:
+        if (y if split[0] == b"H" else x) < split[1]:
             return self.get_split_for_point(x, y, split[2]) + [ split ]
         else:
-            if split[0] == "H":
+            if split[0] == b"H":
                 y -= split[1]
             else:
                 x -= split[1]
@@ -234,15 +202,16 @@ class Configuration(object):
     def __str__(self):
         assert len(self.edid) <= 512
         assert len(self.name) <= 128
-        return "".join([struct.pack("128s512sII", self.name, self.edid, self.width, self.height), self.splits_str])
+        return b"".join([struct.pack("128s512sII", self.name, self.edid, int(self.width), int(self.height)), self.splits_str])
+    __bytes__ = __str__
 
     @classmethod
     def new_from_str(cls, string):
         obj = cls.__new__(cls)
         obj.name, obj.edid, obj.width, obj.height = struct.unpack("128s512sII", string[:128+512+4*2])
-        if "\x00" in obj.edid:
-            obj.edid = obj.edid[:obj.edid.index("\x00")]
-        obj.name = obj.name[:obj.name.index("\x00")]
+        if b"\x00" in obj.edid:
+            obj.edid = obj.edid[:obj.edid.index(b"\x00")]
+        obj.name = obj.name[:obj.name.index(b"\x00")]
         obj.splits_str = string[128+512+4*2:]
         obj.height = float(obj.height)
         obj.width = float(obj.width)
@@ -254,7 +223,7 @@ def base_coordinates(splits):
     while len(splits) > 1:
         if splits[1][2] is not splits[0]:
             assert(splits[1][3] is splits[0])
-            if splits[1][0] == "H":
+            if splits[1][0] == b"H":
                 y += splits[1][1]
             else:
                 x += splits[1][1]
@@ -304,7 +273,7 @@ class ConfigurationWidget(Gtk.HBox):
                 context.stroke()
                 return color_index
             context.save()
-            if split[0] == "H":
+            if split[0] == b"H":
                 context.save()
                 color_index = _draw_split(self, context, split[2], color_index)
                 context.restore()
@@ -355,11 +324,11 @@ class ConfigurationWidget(Gtk.HBox):
                     self._mouse_handler_modify_split[0].pop()
                 if self._mouse_handler_decision == 1 or (self._mouse_handler_decision != 2 and xdiff > ydiff and xdiff > 50):
                     base = base_coordinates(self._mouse_handler_modify_split)
-                    self._mouse_handler_modify_split[0] += [ "H", event.y / 300. * self._aspect_ratio * self._configuration.height - base[1], [], [] ]
+                    self._mouse_handler_modify_split[0] += [ b"H", event.y / 300. * self._aspect_ratio * self._configuration.height - base[1], [], [] ]
                     self._mouse_handler_decision = 1
                 elif self._mouse_handler_decision == 2 or (self._mouse_handler_decision != 1 and ydiff > 50):
                     base = base_coordinates(self._mouse_handler_modify_split)
-                    self._mouse_handler_modify_split[0] += [ "V", event.x / 300. * self._configuration.width - base[0], [], [] ]
+                    self._mouse_handler_modify_split[0] += [ b"V", event.x / 300. * self._configuration.width - base[0], [], [] ]
                     self._mouse_handler_decision = 2
             self.queue_draw()
 
@@ -387,7 +356,7 @@ class ConfigurationWidget(Gtk.HBox):
                 # (Re)Move left edge
                 which = 1
                 while True:
-                    if target_split[which][0] == "V" and target_split[which][3] is target_split[which - 1]:
+                    if target_split[which][0] == b"V" and target_split[which][3] is target_split[which - 1]:
                         break
                     which += 1
                 self._mouse_handler_alter_in = target_split[which:]
@@ -396,7 +365,7 @@ class ConfigurationWidget(Gtk.HBox):
                 # (Re)Move top edge
                 which = 1
                 while True:
-                    if target_split[which][0] == "H" and target_split[which][3] is target_split[which - 1]:
+                    if target_split[which][0] == b"H" and target_split[which][3] is target_split[which - 1]:
                         break
                     which += 1
                 self._mouse_handler_alter_in = target_split[which:]
@@ -450,8 +419,8 @@ class ConfigurationWidget(Gtk.HBox):
         self.pack_end(info, True, True, 5)
 
     def set_info(self, text):
-        edid = self._configuration.edid[:10] + "..." + self._configuration.edid[-10:]
-        self._info_label.set_markup("<b>{c.name}@{c.width}x{c.height}</b>\nEDID: {shortened_edid}\n\n{text}".format(c=self._configuration, shortened_edid=edid, text=text))
+        edid = (self._configuration.edid[:10] + b"..." + self._configuration.edid[-10:]).decode("ascii")
+        self._info_label.set_markup("<b>{c.ascii_name}@{c.width}x{c.height}</b>\nEDID: {shortened_edid}\n\n{text}".format(c=self._configuration, shortened_edid=edid, text=text))
 
 
 class MainWindow(Gtk.Window):
@@ -479,10 +448,10 @@ class MainWindow(Gtk.Window):
     def serialize(self):
         configurations = []
         for config in self._configurations:
-            sconfig = str(config)
+            sconfig = bytes(config)
             configurations.append(struct.pack("=I", len(sconfig)))
             configurations.append(sconfig)
-        return "".join(configurations)
+        return b"".join(configurations)
 
     def load(self, data):
         while data:
@@ -543,7 +512,7 @@ class MainWindow(Gtk.Window):
                 dialog.destroy()
             if Gtk.ResponseType.YES == response:
                 try:
-                    with open(self.configuration_file_path, "w") as output:
+                    with open(self.configuration_file_path, "wb") as output:
                         output.write(configuration)
                     Gtk.main_quit()
                 except:
@@ -575,7 +544,7 @@ class MainWindow(Gtk.Window):
         self.configuration_file_path = os.path.expanduser("~/.config/fakexrandr.bin")
         if os.access(self.configuration_file_path, os.R_OK):
             try:
-                configuration_data = open(self.configuration_file_path).read()
+                configuration_data = open(self.configuration_file_path, "rb").read()
                 self._initial_configuration_data = configuration_data
                 self.load(configuration_data)
             except:
@@ -589,17 +558,3 @@ if __name__ == '__main__':
     wnd = MainWindow()
     wnd.show_all()
     Gtk.main()
-
-# TODO
-# · Store values in Xrdb
-# · Store values to configuration file (?!)
-# · Serialize/Deserialize on load
-#
-# Thoughts:
-# · Let the first application open a socket and serve the configuration to
-#   others
-# · Do this using fork() and exec() a small daemon that exits with X11
-# · Use a standardized socket path for this, with the DISPLAY variable
-#   somewhere in the name
-#
-#  CON: Works only locally, not through SSH.
