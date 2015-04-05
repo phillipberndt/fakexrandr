@@ -1,9 +1,13 @@
 FakeXRandR
 ==========
 
-This is a counterpart to fakexinerama, but for XRandR. It hooks into libXrandr
-and replaces a certain, configurable monitor configuration with two virtual
-monitors, each of half the original's size.
+This is a tool to cheat an X11 server to believe that there are more monitors
+than there actually are. It hooks into libXRandR and libXinerama and replaces
+certain, configurable monitor configurations with virtual monitors. A tool that
+comes with this package can be used to configure how monitors are split.
+
+This tool used to only work with XRandR, but I found it useful to add Xinerama
+emulation. It can be readily removed if it isn't needed though.
 
 Licensing
 ---------
@@ -28,20 +32,17 @@ wrong window placement by window managers. Matrox Tripple Head 2 Go et al. are
 other candidates, where there really is only one big monitor, but you'd want to
 split it anyway.
 
-With slight modifications, this library is also suited for developers willing to
-test multi-head behaviour without multiple monitors. Keep in mind that this library
-right now can not do more than split the monitor vertically in half.
-
 Installation
 ------------
 
-In most cases, simply run `make`, then install using `make install`. This will
-create a configuration which splits a monitor with the largest possible
-resolution that `xrandr` outputs at compile time into two virtual monitors. Pay
+In most cases, simply run `make`, then install using `make install`. This will determine
+where the library should be installed and where the originals reside. Pay
 attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
-distribution. To split the monitor into more than two screens, edit the `EXTRA_SCREENS`
-variable in the created `config.h` file.
+distribution.
+
+After installation, use the `manage.py` tool to create a configuration (in
+`~/.config/fakexrandr.bin`).
 
 For **Arch Linux**, there is a [PKGBUILD](https://aur.archlinux.org/packages/fakexrandr-git/)
 ([git](https://github.com/pschmitt/aur-fakexrandr-git)) by
@@ -53,11 +54,11 @@ Manual installation
 If you need FakeXRandR for another use case or the automated building does not
 work for you, here are some details:
 
-The `configure` script runs `xrandr` and creates a `config.h` header with the
-resolution of the monitor to split, the path to the system's real `libXrandr.so`
-file and a path which preceeds that of the real library in the ld search path,
-where the FakeXRandR should be placed. You can use `ldconfig -v` to get a list
-of suitable directories, if `configure` should fail to determine one.
+The `configure` script creates a `config.h` header with the
+path to the system's real `libXrandr.so` file and a path which preceeds that of
+the real library in the ld search path, where the FakeXRandR should be placed.
+You can use `ldconfig -v` to get a list of suitable directories, if `configure`
+should fail to determine one.
 
 The `libXrandr.c` file only contains a initialization function which loads the
 symbols from the real library and implementations of the functions that we
@@ -70,11 +71,10 @@ FAQ
 
 * **How can I see if it's working?**<br/>
   Run `ldd xrandr`. `libXrandr.so` should show up in `/usr/local/lib`. Then,
-  start `xrandr`. The screen which is set to the resolution supplied in
-  `config.h` should show up twice, with the duplicate having an appended `~1`
-  in the end. After you restarted your X11 session, fullscreening applications
-  using Xrandr (e.g. GTK apps) should fullscreen to the virtual screen, not the
-  physical one.
+  start `xrandr`. Any split screens should show up multiple times, with `~1`,
+  `~2`, etc. appended to their names.  After you restarted your X11 session,
+  fullscreening applications using Xrandr (e.g. GTK apps) should fullscreen to
+  the virtual screen, not the physical one.
 * **Changing settings of the fake screen doesn't have any effect?!**<br/>
   XRandR is only used to *communicate* information on the resolution and output
   settings between X11 server, graphics driver and applications. It is up to
@@ -83,11 +83,6 @@ FAQ
   settings for fake screens won't have any effect.
 * **My two screens are mirrored. Does this library help?**<br/>
   No. See the FAQ in the Gist for FakeXinerama (see "See also" section).
-
-To do
------
-
-* Make this run-time configurable, allow more than one split, allow horizontal and not-in-half splits
 
 See also
 --------

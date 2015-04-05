@@ -18,7 +18,7 @@ import sys
 
     <store>         := <configuration length: 4 bytes unsigned native byte order length of the configuration> <configuration>
 
-    <configuration> := <name of the configuration: 128 characters, zero padded> <edid for configuration: 512 characters> <width: 4 bytes unsigned native byte order> <height: see width> <splits>
+    <configuration> := <name of the configuration: 128 characters, zero padded> <edid for configuration: 768 characters> <width: 4 bytes unsigned native byte order> <height: see width> <splits>
 
     <splits>        := (("H"|"V") <position of the split: see width> <splits> <splits>)
                      | "N"
@@ -108,7 +108,7 @@ def query_xrandr():
 
     to_dict = lambda what: dict((x, getattr(out.contents, x)) for x in dir(what.contents) if x[0] != "_")
 
-    edidAtom = libX11.XInternAtom(display, "EDID", 1)
+    edidAtom = libX11.XInternAtom(display, b"EDID", 1)
 
     crtcs = {}
     for i in range(screen_resources.contents.ncrtc):
@@ -126,13 +126,13 @@ def query_xrandr():
         bytes_after = ctypes.c_ulong()
         prop = ctypes.c_void_p()
         libXrandr.XRRGetOutputProperty(display, screen_resources.contents.outputs[i], edidAtom,
-                                       0, 100, False, False, 0, ctypes.byref(actual_type),
+                                       0, 384, False, False, 0, ctypes.byref(actual_type),
                                        ctypes.byref(actual_format), ctypes.byref(nitems),
                                        ctypes.byref(bytes_after), ctypes.byref(prop))
 
         if nitems.value > 0:
             outputs[out.contents.name] = to_dict(out)
-            outputs[out.contents.name]["edid"] = "".join(( "%02x" % (ctypes.cast(prop.value + i, ctypes.POINTER(ctypes.c_ubyte)).contents.value) for i in range(nitems.value) ))
+            outputs[out.contents.name]["edid"] = ("".join(( "%02x" % (ctypes.cast(prop.value + i, ctypes.POINTER(ctypes.c_ubyte)).contents.value) for i in range(nitems.value) ))).encode("ascii")
             outputs[out.contents.name]["crtc"] = crtcs[outputs[out.contents.name]["crtc"]]
 
         libXrandr.XRRFreeOutputInfo(out)
@@ -178,6 +178,14 @@ class Configuration(object):
             return [ stype, pos, left, right ], istr
         self.splits = _build(istr)[0]
 
+    @property
+    def splits_count(self):
+        def _build(arr):
+            if not arr:
+                return 1
+            return _build(arr[2]) + _build(arr[3])
+        return _build(self.splits)
+
     def get_split_for_point(self, x, y, split=None):
         if split is None:
             split = self.splits
@@ -200,19 +208,19 @@ class Configuration(object):
         return other.edid == self.edid
 
     def __str__(self):
-        assert len(self.edid) <= 512
+        assert len(self.edid) <= 768
         assert len(self.name) <= 128
-        return b"".join([struct.pack("128s512sII", self.name, self.edid, int(self.width), int(self.height)), self.splits_str])
+        return b"".join([struct.pack("128s768sIII", self.name, self.edid, int(self.width), int(self.height), self.splits_count), self.splits_str])
     __bytes__ = __str__
 
     @classmethod
     def new_from_str(cls, string):
         obj = cls.__new__(cls)
-        obj.name, obj.edid, obj.width, obj.height = struct.unpack("128s512sII", string[:128+512+4*2])
+        obj.name, obj.edid, obj.width, obj.height, _ = struct.unpack("128s768sIII", string[:128+768+4*3])
         if b"\x00" in obj.edid:
             obj.edid = obj.edid[:obj.edid.index(b"\x00")]
         obj.name = obj.name[:obj.name.index(b"\x00")]
-        obj.splits_str = string[128+512+4*2:]
+        obj.splits_str = string[128+768+4*3:]
         obj.height = float(obj.height)
         obj.width = float(obj.width)
         return obj
@@ -429,8 +437,8 @@ class MainWindow(Gtk.Window):
         self.displays_combo_store.clear()
         self._displays_order = []
         for name, output in self._displays.items():
-            verbose_name = "{name}@{crtc[width]:d}x{crtc[height]:d} (edid={edidS}...{edidE})".format(name=name, crtc=output["crtc"], edidS=output["edid"][:10], edidE=output["edid"][-10:])
-            self.displays_combo_store.append((name, verbose_name))
+            verbose_name = "{name}@{crtc[width]:d}x{crtc[height]:d} (edid={edidS}...{edidE})".format(name=name.decode("ascii"), crtc=output["crtc"], edidS=output["edid"].decode("ascii")[:10], edidE=output["edid"].decode("ascii")[-10:])
+            self.displays_combo_store.append((name.decode("ascii"), verbose_name))
             self._displays_order.append(name)
         self.combo_box.set_active(0)
 
