@@ -96,7 +96,7 @@ static char *config_file;
 static int config_file_fd;
 static size_t config_file_size;
 
-static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x, unsigned int y, unsigned int width, unsigned int height, RROutput output, XRROutputInfo *output_info,
+static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x, unsigned int y, unsigned int width, unsigned int height, XRRScreenResources *resources, RROutput output, XRROutputInfo *output_info,
 		XRRCrtcInfo *crtc_info, struct FakeInfo ***fake_crtcs, struct FakeInfo ***fake_outputs, struct FakeInfo ***fake_modes) {
 
 	if(config[0] == 'N') {
@@ -154,6 +154,12 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 		(**fake_modes)->xid = (output_info->crtc & ~XID_SPLIT_MASK) | ((*n) << XID_SPLIT_SHIFT);
 		(**fake_modes)->parent_xid = 0;
 		XRRModeInfo *fake_mode_info = (**fake_modes)->info = (void*)**fake_modes + sizeof(struct FakeInfo);
+		for(i=0; i<resources->nmode; i++) {
+			if(resources->modes[i].id == crtc_info->mode) {
+				*fake_mode_info = resources->modes[i];
+				break;
+			}
+		}
 		fake_mode_info->id = (**fake_modes)->xid;
 		fake_mode_info->width = width;
 		fake_mode_info->height = height;
@@ -167,14 +173,14 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 	}
 	unsigned long split_pos = *(unsigned long *)&config[1];
 	if(config[0] == 'H') {
-		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
-		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
 	else {
 		assert(config[0] == 'V');
 
-		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
-		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
 }
 
@@ -200,7 +206,7 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 				output_handled = 1;
 
 				int n = 0;
-				_config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, output, output_info, output_crtc, fake_crtcs, fake_outputs, fake_modes);
+				_config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, resources, output, output_info, output_crtc, fake_crtcs, fake_outputs, fake_modes);
 			}
 		}
 
