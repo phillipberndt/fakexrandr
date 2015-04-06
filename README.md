@@ -3,11 +3,21 @@ FakeXRandR
 
 This is a tool to cheat an X11 server to believe that there are more monitors
 than there actually are. It hooks into libXRandR and libXinerama and replaces
-certain, configurable monitor configurations with virtual monitors. A tool that
-comes with this package can be used to configure how monitors are split.
+certain, configurable monitor configurations with multiple virtual monitors. A
+tool that comes with this package can be used to configure how monitors are
+split.
 
 This tool used to only work with XRandR, but I found it useful to add Xinerama
 emulation. It can be readily removed if it isn't needed though.
+
+Use cases
+---------
+
+You'll want to use this library if you have a multi-head setup, but a crappy
+video driver which tells RandR that there is only one big monitor, resulting in
+wrong window placement by window managers. Matrox Tripple Head 2 Go et al. are
+other candidates, where there really is only one big monitor, but you'd want to
+split it anyway.
 
 Licensing
 ---------
@@ -23,15 +33,6 @@ Authors
 * Geoffrey 'gnif' McRae
 * Gerry Demaret
 
-Use cases
----------
-
-You'll want to use this library if you have a multi-head setup, but a crappy
-video driver which tells RandR that there is only one big monitor, resulting in
-wrong window placement by window managers. Matrox Tripple Head 2 Go et al. are
-other candidates, where there really is only one big monitor, but you'd want to
-split it anyway.
-
 Installation
 ------------
 
@@ -41,7 +42,7 @@ attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
 distribution.
 
-After installation, use the `manage.py` tool to create a configuration (in
+After installation, use the `fakexrandr-manage` tool to create a configuration (in
 `~/.config/fakexrandr.bin`).
 
 For **Arch Linux**, there is a [PKGBUILD](https://aur.archlinux.org/packages/fakexrandr-git/)
