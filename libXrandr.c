@@ -1,3 +1,12 @@
+/*
+	FakeXRandR
+	Copyright (c) 2015, Phillip Berndt
+
+	This is a replacement library for libXrandr.so and, optionally,
+	libXinerama.so. It replaces configurable outputs with multiple
+	sub-outputs.
+*/
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -12,17 +21,17 @@
 #include <assert.h>
 #include <string.h>
 
+
 /*
-	This currently lacks much documentation, sorry. This is pretty much WIP.
-	See the master branch for a more comprehensive version.
+	The management script uses this symbol to identify the fake libXrandr version
 */
-
-
 int _is_fake_xrandr = 1;
 
 /*
 	We use this XID modifier to flag outputs and CRTCs as
-	fake by XORing with it.
+	fake by adding a counter in the first few bits:
+	 · xid & ~XID_SPLIT_MASK is the xid of the original output
+	 · xid >> XID_SPLIT_SHIFT is the counter identifying a virtual, split screen
 
 	On the choice: A typical XID is of the form
 	 client_id | (xid_mask & arbitrary value),
@@ -51,7 +60,9 @@ int _is_fake_xrandr = 1;
 
 /*
 	We use an augmented version of the screen resources to store all our
-	information
+	information: We preallocate all XRROutputInfo and XRRCrtcInfo structures
+	for the fake screens upon a request for screen resources and only return
+	pointers in the functions that return them.
 */
 struct FakeInfo {
 	XID xid;
@@ -61,9 +72,14 @@ struct FakeInfo {
 };
 
 struct FakeScreenResources {
+	// This is crafted to look like a XRRScreenResources to an unaware user
 	XRRScreenResources res;
 
+	// This points to the original screen resources. We don't free them to
+	// be able to use the original strings/lists without having to copy them.
 	XRRScreenResources *parent_res;
+
+	// These lists point to the fake OutputInfo/CrtcInfo/Mode structures
 	struct FakeInfo *fake_crtcs;
 	struct FakeInfo *fake_outputs;
 	struct FakeInfo *fake_modes;
@@ -72,7 +88,9 @@ struct FakeScreenResources {
 /*
 	Configuration management
 
-	See manage.py for the configuration file syntax.
+	The configuration file format is documented in the management script. These
+	functions load the configuration file and fill the FakeInfo lists with
+	information on the fake outputs.
 */
 static char *config_file;
 static int config_file_fd;
@@ -165,6 +183,7 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 
 	char *config;
 	for(config = config_file; config <= config_file + config_file_size; ) {
+		// Walk through the configuration file and search for the target_edid
 		unsigned long size = *(unsigned long *)config;
 		char *name = &config[4];
 		char *edid = &config[4 + 128];
@@ -177,6 +196,7 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 			XRRCrtcInfo *output_crtc = _XRRGetCrtcInfo(dpy, resources, output_info->crtc);
 
 			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
+				// If it is found and the size matches, add fake outputs/crtcs to the list
 				output_handled = 1;
 
 				int n = 0;
@@ -198,6 +218,7 @@ static void close_configuration() {
 }
 
 static int open_configuration() {
+	// Load the configuration from ${XDG_CONFIG_HOME:-$HOME/.config}/fakexrandr.bin
 	if(config_file) {
 		close_configuration();
 	}
@@ -235,6 +256,11 @@ static int open_configuration() {
 	return 0;
 }
 
+/*
+	Helper function to return a hex-coded EDID string for a given output
+
+	edid must point to a sufficiently large (768 bytes) buffer.
+*/
 static int get_output_edid(Display *dpy, RROutput output, char *edid) {
 	Atom actual_type;
 	unsigned int actual_format;
@@ -266,6 +292,9 @@ static int get_output_edid(Display *dpy, RROutput output, char *edid) {
 	return nitems * 2;
 }
 
+/*
+	Helper functions for the FakeInfo list structure
+*/
 static int list_length(struct FakeInfo *list) {
 	int i = 0;
 	while(list) {
@@ -291,6 +320,10 @@ static struct FakeInfo *xid_in_list(struct FakeInfo *list, XID xid) {
 	return NULL;
 }
 
+/*
+	The following function augments the original XRRScreenResources with the
+	fake outputs
+*/
 static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenResources *res) {
 	struct FakeInfo *outputs = NULL;
 	struct FakeInfo *crtcs = NULL;
@@ -300,6 +333,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	struct FakeInfo **crtcs_end = &crtcs;
 	struct FakeInfo **modes_end = &modes;
 
+	// Fill the FakeInfo structures
 	if(open_configuration()) {
 		struct FakeScreenResources *retval = malloc(sizeof(struct FakeScreenResources));
 		retval->res = *res;
@@ -319,6 +353,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	int noutput = res->noutput + list_length(outputs);
 	int nmodes = res->nmode + list_length(modes);
 
+	// Create a new XRRScreenResources with the fake information in place
 	struct FakeScreenResources *retval = malloc(sizeof(struct FakeScreenResources) + ncrtc * sizeof(RRCrtc) + noutput * sizeof(RROutput) + nmodes * sizeof(XRRModeInfo));
 
 	retval->res = *res;
@@ -326,6 +361,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	retval->fake_crtcs = crtcs;
 	retval->fake_outputs = outputs;
 
+	// We copy all the original CRTCs and add our fake ones
 	retval->res.ncrtc = ncrtc;
 	retval->res.crtcs = (void*)retval + sizeof(struct FakeScreenResources);
 	memcpy(retval->res.crtcs, res->crtcs, sizeof(RRCrtc) * res->ncrtc);
@@ -335,6 +371,8 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 		*next_crtc = tcrtc->xid;
 		next_crtc++;
 	}
+
+	// We copy the outputs that were not overridden and add our fake ones
 	retval->res.noutput = 0;
 	retval->res.outputs = (void*)retval->res.crtcs + sizeof(RRCrtc) * ncrtc;
 	RROutput *next_output = retval->res.outputs;
@@ -355,6 +393,8 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 			retval->res.noutput++;
 		}
 	}
+
+	// We copy all the original modes and add our fake ones
 	retval->res.nmode = nmodes;
 	retval->res.modes = (void*)retval->res.outputs + sizeof(RROutput) * noutput;
 	memcpy(retval->res.modes, res->modes, res->nmode * sizeof(XRRModeInfo));
@@ -419,6 +459,7 @@ XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RRO
 }
 
 void XRRFreeOutputInfo(XRROutputInfo *outputInfo) {
+	// TODO This _might_ be a dynamic info that ought to be freed
 	// Intentionally empty.
 }
 
@@ -453,7 +494,10 @@ int XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, T
 
 /*
 	Fake Xinerama
+
+	This is little overhead with all the work we already did above..
 */
+#ifndef NO_FAKE_XINERAMA
 Bool XineramaQueryExtension(Display *dpy, int *event_base, int *error_base) {
 	return xTrue;
 }
@@ -493,3 +537,4 @@ XineramaScreenInfo* XineramaQueryScreens(Display *dpy, int *number) {
 
     return retval;
 }
+#endif

@@ -66,6 +66,19 @@ actually override and which require more than replacement of XIDs for fake
 screens with real the one's. All other functions are automatically generated
 by `make_skeleton.py` from the default Xrandr header file.
 
+How to
+------
+
+After installation, you have a tool `fakexrandr-manage` available. Use the
+select box at the top to choose an output that you want to split and click
+"Create". It will be identified by its resolution and EDID, which is a device
+specific identifier. A monitor will be drawn below. You can add splits by
+drawing horizontal and vertical lines with your mouse. You can move existing
+lines with the left mouse button, and remove them by right-clicking. When you
+close the configuration tool, you will be asked whether you want to save the
+altered configuration. Other programs, including your window manager, might
+need to be restarted before they begin to use the new configuration.
+
 FAQ
 ---
 
@@ -84,8 +97,17 @@ FAQ
 * **My two screens are mirrored. Does this library help?**<br/>
   No. See the FAQ in the Gist for FakeXinerama (see "See also" section).
 
+TODO
+----
+
+* The program currently relies on the OS caching the configuration file in system
+  memory. Since many programs will read it often, it would be useful to cache
+  it ourselfes, in XResources (see an old revision for some Python code in the
+  management tool regarding that), via a daemon, or shared memory.
+
 See also
 --------
 
  * https://gist.github.com/phillipberndt/7688785
-   For my version of Fake xinerama, based on Kris Maglione's version
+   For my version of Fake xinerama, based on Kris Maglione's version. Note
+   that this is now included in FakeXRandR.
