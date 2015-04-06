@@ -73,12 +73,16 @@ How to
 After installation, you have a tool `fakexrandr-manage` available. Use the
 select box at the top to choose an output that you want to split and click
 "Create". It will be identified by its resolution and EDID, which is a device
-specific identifier. A monitor will be drawn below. You can add splits by
-drawing horizontal and vertical lines with your mouse. You can move existing
-lines with the left mouse button, and remove them by right-clicking. When you
-close the configuration tool, you will be asked whether you want to save the
-altered configuration. Other programs, including your window manager, might
-need to be restarted before they begin to use the new configuration.
+specific identifier. A monitor will be drawn below.
+
+![FakeXRandr configuration](https://cloud.githubusercontent.com/assets/387407/7010346/acbc329c-dca0-11e4-8e16-0d45079dc570.png)
+
+You can add splits by drawing horizontal and vertical lines with your mouse.
+You can move existing lines with the left mouse button, and remove them by
+right-clicking. When you close the configuration tool, you will be asked
+whether you want to save the altered configuration. Other programs, including
+your window manager, might need to be restarted before they begin to use the
+new configuration.
 
 FAQ
 ---
