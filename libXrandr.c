@@ -524,12 +524,12 @@ XineramaScreenInfo* XineramaQueryScreens(Display *dpy, int *number) {
 		if(output->crtc) {
 			XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy, res, output->crtc);
 
+			retval[*number].screen_number = *number;
+			retval[*number].x_org = crtc->x;
+			retval[*number].y_org = crtc->y;
+			retval[*number].width = crtc->width;
+			retval[*number].height = crtc->height;
 			(*number)++;
-			retval[i].screen_number = i;
-			retval[i].x_org = crtc->x;
-			retval[i].y_org = crtc->y;
-			retval[i].width = crtc->width;
-			retval[i].height = crtc->height;
 			XRRFreeCrtcInfo(crtc);
 		}
 
