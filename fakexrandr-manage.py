@@ -205,7 +205,7 @@ class Configuration(object):
         return "{c.name}@{c.width}x{c.height}".format(c=self)
 
     def __eq__(self, other):
-        return other.edid == self.edid
+        return other.edid == self.edid and self.width == other.width and self.height == other.height
 
     def __str__(self):
         assert len(self.edid) <= 768
