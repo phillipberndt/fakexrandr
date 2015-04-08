@@ -171,7 +171,7 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 
 		return config + 1;
 	}
-	unsigned long split_pos = *(unsigned long *)&config[1];
+	unsigned int split_pos = *(unsigned int *)&config[1];
 	if(config[0] == 'H') {
 		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
@@ -185,17 +185,15 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 }
 
 static int config_handle_output(Display *dpy, XRRScreenResources *resources, RROutput output, char *target_edid, struct FakeInfo ***fake_crtcs, struct FakeInfo ***fake_outputs, struct FakeInfo ***fake_modes) {
-	int output_handled = 0;
-
 	char *config;
-	for(config = config_file; config <= config_file + config_file_size; ) {
+	for(config = config_file; (int)(config - config_file) <= (int)config_file_size; ) {
 		// Walk through the configuration file and search for the target_edid
-		unsigned long size = *(unsigned long *)config;
+		unsigned int size = *(unsigned int *)config;
 		char *name = &config[4];
 		char *edid = &config[4 + 128];
-		unsigned long width = *(unsigned long *)&config[4 + 128 + 768];
-		unsigned long height = *(unsigned long *)&config[4 + 128 + 768 + 4];
-		unsigned long count = *(unsigned long *)&config[4 + 128 + 768 + 4 + 4];
+		unsigned int width = *(unsigned int *)&config[4 + 128 + 768];
+		unsigned int height = *(unsigned int *)&config[4 + 128 + 768 + 4];
+		unsigned int count = *(unsigned int *)&config[4 + 128 + 768 + 4 + 4];
 
 		if(strncmp(edid, target_edid, 768) == 0) {
 			XRROutputInfo *output_info = _XRRGetOutputInfo(dpy, resources, output);
@@ -203,17 +201,16 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 
 			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
 				// If it is found and the size matches, add fake outputs/crtcs to the list
-				output_handled = 1;
-
 				int n = 0;
 				_config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, resources, output, output_info, output_crtc, fake_crtcs, fake_outputs, fake_modes);
+				return 1;
 			}
 		}
 
-		config += size;
+		config += 4 + size;
 	}
 
-	return output_handled;
+	return 0;
 }
 
 
