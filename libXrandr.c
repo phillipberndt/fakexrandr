@@ -135,8 +135,8 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 		(**fake_crtcs)->parent_xid = output_info->crtc;
 		XRRCrtcInfo *fake_crtc_info = (**fake_crtcs)->info = ((void*)**fake_crtcs) + sizeof(struct FakeInfo);
 		*fake_crtc_info = *crtc_info;
-		fake_crtc_info->x = x;
-		fake_crtc_info->y = y;
+		fake_crtc_info->x = crtc_info->x + x;
+		fake_crtc_info->y = crtc_info->y + y;
 		fake_crtc_info->width = width;
 		fake_crtc_info->height = height;
 		fake_crtc_info->mode = *(fake_info->modes);
