@@ -30,13 +30,13 @@ REAL_LIBRARY_DIR=$(dirname "${REAL_LIBRARY}")
 LIBRARY_DIRECTORIES=($(ldconfig -v 2>/dev/null | grep -oE '^/[^:]+'))
 FAKE_LIBRARY_DIRECTORY=
 CANDIDATES=
-for i in `seq ${#LIBRARY_DIRECTORIES[@]}`; do
-	if [ "${LIBRARY_DIRECTORIES[$i]}" == "${REAL_LIBRARY_DIR}" ]; then
+for DIR in ${LIBRARY_DIRECTORIES[@]}; do
+	if [ "$DIR" == "${REAL_LIBRARY_DIR}" ]; then
 		break
 	fi
-	CANDIDATES+="${LIBRARY_DIRECTORIES[$i]}, "
-	if echo ${LIBRARY_DIRECTORIES[$i]} | grep -q local; then
-		FAKE_LIBRARY_DIRECTORY=${LIBRARY_DIRECTORIES[$i]}
+	CANDIDATES+="$DIR, "
+	if echo $DIR | grep -q local; then
+		FAKE_LIBRARY_DIRECTORY=$DIR
 		break
 	fi
 done
