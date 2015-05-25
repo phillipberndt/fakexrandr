@@ -34,6 +34,16 @@ Authors
 * Gerry Demaret
 * Audrius Butkevicius
 
+Use cases
+---------
+
+You'll want to use this library if you have a multi-head setup, but a crappy
+video driver which tells RandR that there is only one big monitor, resulting in
+wrong window placement by window managers. Matrox Tripple Head 2 Go et al. are
+other candidates, where there really is only one big monitor, but you'd want to
+split it anyway. Another use case is to test multi-head behaviour without
+having multiple monitors.
+
 Installation
 ------------
 
