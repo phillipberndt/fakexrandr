@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 # vim:fdm=marker:fileencoding=utf8
-from gi.repository import Gtk, Gdk
-import ctypes
-import os
-import struct
-import sys
-
 """
-    This script provides a GUI for fakexrandr configurations
+    This script provides a GUI/CLI for fakexrandr configurations
 
 
 
@@ -29,8 +23,23 @@ import sys
     All units are pixels.
 
     The configuration is stored in ~/.config/fakexrandr.bin.
-
 """
+
+from __future__ import print_function
+import shlex
+
+import ctypes
+import os
+import struct
+import sys
+
+try:
+    from gi.repository import Gtk, Gdk
+    HAS_GTK=True
+except ImportError:
+    HAS_GTK=False
+
+CONFIGURATION_FILE_PATH = os.path.expanduser("~/.config/fakexrandr.bin")
 
 " Code to open Xlib via ctypes {{{ "
 try:
@@ -45,14 +54,21 @@ try:
         libXrandr = ctypes.CDLL("libXrandr.so")
         if hasattr(libXrandr, "_is_fake_xrandr"):
             print >> sys.stderr, "Warning: Failed to use the real XrandR library; falling back to the fake one."
+    libX11.XOpenDisplay.restype = ctypes.c_voidp
+    display = libX11.XOpenDisplay("")
+    HAS_X11_DISPLAY=True
 except:
-    print >> sys.stderr, "Failed to load libX11.so and/or libXrandr.so. Are you running this from linux\n", \
-        "and using cpython (or another python with the ctypes extension)?\n"
-    sys.exit(1)
+    HAS_X11_DISPLAY=False
+    display = None
+    libX11 = None
 
-libX11.XOpenDisplay.restype = ctypes.c_voidp
-display = libX11.XOpenDisplay("")
+def require_x11():
+    if not HAS_X11_DISPLAY:
+        print("The GUI requires ctypes to be able to open libX11.so and an X Display", file=sys.stderr)
+        sys.exit(1)
+
 " }}}"
+
 " Code to query for outputs and crtcs via the Randr extension {{{ "
 class XRRScreenResources(ctypes.Structure):
     _fields_ = [("timestamp", ctypes.c_ulong),
@@ -179,6 +195,31 @@ class Configuration(object):
         self.splits = _build(istr)[0]
 
     @property
+    def human_readable_splits_str(self):
+        def _build(arr):
+            if not arr:
+                return "N"
+            return "\n".join(["%c %d" % (arr[0].decode("ascii"), int(arr[1])),
+                              " %s" % ("\n ".join(_build(arr[2]).split("\n"))),
+                              " %s" % ("\n ".join(_build(arr[3]).split("\n")))])
+        return _build(self.splits)
+
+    @human_readable_splits_str.setter
+    def human_readable_splits_str(self, istr):
+        tokens = istr.encode().split()
+        def _build():
+            stype = tokens.pop(0)
+            if stype == b"N":
+                return []
+            if stype not in (b"H", b"V"):
+                raise ValueError("Unknown split type: %c" % stype)
+            pos = tokens.pop(0)
+            left = _build()
+            right = _build()
+            return [ stype, pos, left, right ]
+        self.splits = _build()
+
+    @property
     def splits_count(self):
         def _build(arr):
             if not arr:
@@ -223,6 +264,16 @@ class Configuration(object):
         obj.splits_str = string[128+768+4*3:]
         obj.height = float(obj.height)
         obj.width = float(obj.width)
+        return obj
+
+    @classmethod
+    def new_from_shdict(cls, variables):
+        obj = cls.__new__(cls)
+        obj.name = variables["NAME"].encode()
+        obj.edid = variables["EDID"].encode()
+        obj.height = float(variables["HEIGHT"])
+        obj.width = float(variables["WIDTH"])
+        obj.human_readable_splits_str = variables["SPLITS"]
         return obj
 
 def base_coordinates(splits):
@@ -430,6 +481,19 @@ class ConfigurationWidget(Gtk.HBox):
         edid = (self._configuration.edid[:10] + b"..." + self._configuration.edid[-10:]).decode("ascii")
         self._info_label.set_markup("<b>{c.ascii_name}@{c.width}x{c.height}</b>\nEDID: {shortened_edid}\n\n{text}".format(c=self._configuration, shortened_edid=edid, text=text))
 
+def serialize_configurations(configurations):
+    retval = []
+    for config in configurations:
+        sconfig = bytes(config)
+        retval.append(struct.pack("=I", len(sconfig)))
+        retval.append(sconfig)
+    return b"".join(retval)
+
+def unserialize_configurations(data):
+    while data:
+        length, = struct.unpack("=I", data[:4])
+        yield Configuration.new_from_str(data[4:4+length])
+        data = data[4+length:]
 
 class MainWindow(Gtk.Window):
     def load_displays(self):
@@ -454,18 +518,11 @@ class MainWindow(Gtk.Window):
         self.add_configuration(configuration)
 
     def serialize(self):
-        configurations = []
-        for config in self._configurations:
-            sconfig = bytes(config)
-            configurations.append(struct.pack("=I", len(sconfig)))
-            configurations.append(sconfig)
-        return b"".join(configurations)
+        return serialize_configurations(self._configurations)
 
     def load(self, data):
-        while data:
-            length, = struct.unpack("=I", data[:4])
-            self.add_configuration(Configuration.new_from_str(data[4:4+length]))
-            data = data[4+length:]
+        for config in unserialize_configurations(data):
+            self.add_configuration(config)
 
     def add_configuration(self, configuration):
         try:
@@ -520,7 +577,7 @@ class MainWindow(Gtk.Window):
                 dialog.destroy()
             if Gtk.ResponseType.YES == response:
                 try:
-                    with open(self.configuration_file_path, "wb") as output:
+                    with open(CONFIGURATION_FILE_PATH, "wb") as output:
                         output.write(configuration)
                     Gtk.main_quit()
                 except:
@@ -549,20 +606,103 @@ class MainWindow(Gtk.Window):
         self.set_resizable(False)
         self.set_size_request(600, 600)
 
-        self.configuration_file_path = os.path.expanduser("~/.config/fakexrandr.bin")
-        if os.access(self.configuration_file_path, os.R_OK):
+        if os.access(CONFIGURATION_FILE_PATH, os.R_OK):
             try:
-                configuration_data = open(self.configuration_file_path, "rb").read()
+                configuration_data = open(CONFIGURATION_FILE_PATH, "rb").read()
                 self._initial_configuration_data = configuration_data
                 self.load(configuration_data)
             except:
                 error = Gtk.MessageDialog(self, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, "Failed to load configuration from ~/.config/fakexrandr.bin")
                 error.connect("response", lambda *a: error.destroy())
                 error.show()
-
 " }}} "
 
+def perform_action(action):
+    if action == "gui":
+        if not HAS_GTK:
+            print("The GUI requires PyGObject.", file=sys.stderr)
+            sys.exit(1)
+        require_x11()
+
+        wnd = MainWindow()
+        wnd.show_all()
+        Gtk.main()
+
+    elif action == "dump-config":
+        if os.access(CONFIGURATION_FILE_PATH, os.R_OK):
+            try:
+                for config in unserialize_configurations(open(CONFIGURATION_FILE_PATH, "rb").read()):
+                    print("NAME=\"%s\"\nEDID=%s\nWIDTH=%d\nHEIGHT=%d" % (config.name.decode(), config.edid.decode(), config.width, config.height))
+                    print("SPLITS=\"%s\"" % config.human_readable_splits_str)
+                    print()
+            except:
+                print("Failed to load configurations from %s" % CONFIGURATION_FILE_PATH, file=sys.stderr)
+                sys.exit(1)
+        else:
+            print("There does not exist a configuration in %s yet." % CONFIGURATION_FILE_PATH, file=sys.stderr)
+            sys.exit(1)
+
+    elif action == "show-available":
+        require_x11()
+        for name, output in query_xrandr().items():
+            print("NAME=\"%s\"\nEDID=%s\nWIDTH=%d\nHEIGHT=%d\nSPLITS=\"N\"\n" % (name.decode(), output["edid"].decode(), output["crtc"]["width"], output["crtc"]["height"]))
+
+    elif action == "clear-config":
+        if os.access(CONFIGURATION_FILE_PATH, os.R_OK):
+            os.unlink(CONFIGURATION_FILE_PATH)
+
+    elif action == "set-config":
+        if os.access(CONFIGURATION_FILE_PATH, os.R_OK):
+            configurations = { "%s-%d-%d" % (x.edid, x.width, x.height): x for x in unserialize_configurations(open(CONFIGURATION_FILE_PATH, "rb").read()) }
+        else:
+            configurations = {}
+
+        for configuration in sys.stdin.read().split("\n\n"):
+            variables = dict(( x.split("=", 1) for x in shlex.split(configuration) ))
+            if not variables:
+                continue
+            config = Configuration.new_from_shdict(variables)
+            config_key = "%s-%d-%d" % (config.edid, config.width, config.height)
+            if variables["SPLITS"] == "N":
+                if config_key in configurations:
+                    del configurations[config_key]
+            else:
+                configurations[config_key] = config
+
+        configuration_data = serialize_configurations(configurations.values())
+        with open(CONFIGURATION_FILE_PATH, "wb") as output:
+            output.write(configuration_data)
+    else:
+        print("fakexrandr manage script\n"
+              "Syntax: fakexrandr-manage <gui|dump-config|show-available|clear-config|\n"
+              "                           set-config>\n\n"
+              "Available commands:\n"
+              "  gui\n    Run the GTK based gui\n"
+              "  dump-config\n   Dump the configuration file in a parseable format to the console. Different\n"
+              "   configurations are separated by an empty line.\n"
+              "  show-available\n   Query XRandR and show outputs for which a configuration could be created.\n"
+              "  clear-config\n   Remove all stored configurations\n"
+              "  set-config\n   Load configurations from the standard input and merge them into the\n"
+              "   configuration file\n"
+              "\n"
+              "Configuration format:\n"
+              "  The CLI configuration format follows sh syntax and defines the variables NAME,\n"
+              "  EDID, WIDTH, HEIGHT and SPLITS. SPLITS is a string describing how an output\n"
+              "  shall be split. It starts by one of the letters H, V or N, describing the\n"
+              "  kind of split. H means horizontal, V vertical and N no split. Separated by a\n"
+              "  space follows the pixel position of the split. Again separated by a space\n"
+              "  follow the two sub-configurations of the left/right or top/bottom halves. Any\n"
+              "  additional white-space besides a single space is optional any only serves\n"
+              "  better readibility. dump-config indents sub-configurations to this end.\n"
+              "  If SPLITS equals N, a configuration is discarded upon saving it.\n"
+              "\n")
+
 if __name__ == '__main__':
-    wnd = MainWindow()
-    wnd.show_all()
-    Gtk.main()
+    if len(sys.argv) > 1:
+        action = sys.argv[1].lower()
+    elif HAS_GTK:
+        action = "gui"
+    else:
+        action = "dump-config"
+
+    perform_action(action)
