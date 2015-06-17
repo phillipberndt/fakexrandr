@@ -136,6 +136,9 @@ def query_xrandr():
     for i in range(screen_resources.contents.noutput):
         out = libXrandr.XRRGetOutputInfo(display, screen_resources, screen_resources.contents.outputs[i])
 
+        if out.contents.crtc == 0:
+            continue
+
         actual_type = ctypes.c_long()
         actual_format = ctypes.c_int()
         nitems = ctypes.c_ulong()
