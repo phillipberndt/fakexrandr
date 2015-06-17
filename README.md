@@ -86,6 +86,10 @@ whether you want to save the altered configuration. Other programs, including
 your window manager, might need to be restarted before they begin to use the
 new configuration.
 
+Alternatively, there exists a command line interface. Run `fakexrandr-manage help`
+to get usage information. The tool will default to the CLI if PyGObject is missing
+or you do not run it from X11.
+
 FAQ
 ---
 
