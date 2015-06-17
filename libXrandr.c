@@ -338,7 +338,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 
 	// Fill the FakeInfo structures
 	if(open_configuration()) {
-		struct FakeScreenResources *retval = malloc(sizeof(struct FakeScreenResources));
+		struct FakeScreenResources *retval = calloc(1, sizeof(struct FakeScreenResources));
 		retval->res = *res;
 		retval->parent_res = res;
 		return retval;
