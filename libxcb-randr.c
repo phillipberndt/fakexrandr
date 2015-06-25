@@ -43,3 +43,28 @@ static void _init() {
 	Overridden library functions to add the fake output
 */
 
+xcb_randr_get_screen_resources_current_reply_t *xcb_randr_get_screen_resources_current_reply(xcb_connection_t *c,
+		xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t **e) {
+
+	printf("Get screen resources current reply\n");
+	return _xcb_randr_get_screen_resources_current_reply(c, cookie, e);
+}
+
+xcb_randr_get_screen_resources_reply_t *xcb_randr_get_screen_resources_reply(xcb_connection_t *c,
+		xcb_randr_get_screen_resources_cookie_t cookie, xcb_generic_error_t **e) {
+
+	printf("Get screen resources reply\n");
+	return _xcb_randr_get_screen_resources_reply(c, cookie, e);
+}
+
+xcb_randr_get_output_info_reply_t * xcb_randr_get_output_info_reply(xcb_connection_t *c,
+		xcb_randr_get_output_info_cookie_t cookie, xcb_generic_error_t **e ) {
+
+	printf("Get output info reply\n");
+	return _xcb_randr_get_output_info_reply(c, cookie, e);
+}
+
+xcb_randr_get_crtc_info_reply_t * xcb_randr_get_crtc_info_reply(xcb_connection_t *c, xcb_randr_get_crtc_info_cookie_t cookie, xcb_generic_error_t **e ) {
+	printf("Get crtc info reply\n");
+	return _xcb_randr_get_crtc_info_reply(c, cookie, e);
+}
