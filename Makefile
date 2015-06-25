@@ -1,19 +1,33 @@
 PREFIX=/usr
 CFLAGS=-O2
 
-all: libXrandr.so.2 libXinerama.so.1
+ifeq ($(shell pkg-config --errors-to-stdout --print-errors xcb-randr),)
+	XCB_TARGET=libxcb-randr.so.0
+endif
+
+all: libXrandr.so.2 libXinerama.so.1 $(XCB_TARGET)
 
 config.h: configure
 	./configure
 
-skeleton.h: make_skeleton.py
-	./make_skeleton.py > $@ || { rm -f skeleton.h; exit 1; }
+skeleton-xrandr.h: make_skeleton.py
+	./make_skeleton.py X11/extensions/Xrandr.h XRR libXrandr.c RRCrtc,RROutput > $@ || { rm -f $@; exit 1; }
 
-libXrandr.so: libXrandr.c config.h skeleton.h
+skeleton-xcb.h: make_skeleton.py
+	./make_skeleton.py xcb/randr.h xcb_randr_ libxcb-randr.c xcb_randr_output_t,xcb_randr_crtc_t > $@ || { rm -f $@; exit 1; }
+
+libXrandr.so: libXrandr.c config.h skeleton-xrandr.h
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ $< -ldl
+
+libxcb-randr.so: libxcb-randr.c config.h skeleton-xcb.h
 	$(CC) $(CFLAGS) -fPIC -shared -o $@ $< -ldl
 
 libXinerama.so.1 libXrandr.so.2: libXrandr.so
 	[ -e $@ ] || ln -s $< $@
+
+libxcb-randr.so.0: libxcb-randr.so
+	[ -e $@ ] || ln -s $< $@
+
 
 install: libXrandr.so
 	TARGET_DIR=`sed -nre 's/#define FAKEXRANDR_INSTALL_DIR "([^"]+)"/\1/p' config.h`; \
@@ -32,4 +46,4 @@ uninstall: config.h
 	ldconfig
 
 clean:
-	rm -f libXrandr.so libXrandr.so.2 libXinerama.so.1 config.h skeleton.h
+	rm -f libXrandr.so libxcb-randr.so libXrandr.so.2 libXinerama.so.1 $(XCB_TARGET) config.h skeleton-xcb.h skeleton-xrandr.h
