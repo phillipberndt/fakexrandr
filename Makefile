@@ -10,7 +10,7 @@ skeleton.h: make_skeleton.py
 	./make_skeleton.py > $@ || { rm -f skeleton.h; exit 1; }
 
 libXrandr.so: libXrandr.c config.h skeleton.h
-	$(CC) $(CFLAGS) -fPIC -shared -o $@ $<
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ $< -ldl
 
 libXinerama.so.1 libXrandr.so.2: libXrandr.so
 	[ -e $@ ] || ln -s $< $@
