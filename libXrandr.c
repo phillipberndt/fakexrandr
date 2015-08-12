@@ -66,9 +66,6 @@ struct FakeScreenResources {
 	functions load the configuration file and fill the FakeInfo lists with
 	information on the fake outputs.
 */
-static char *config_file;
-static int config_file_fd;
-static size_t config_file_size;
 
 static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x, unsigned int y, unsigned int width, unsigned int height, XRRScreenResources *resources, RROutput output, XRROutputInfo *output_info,
 		XRRCrtcInfo *crtc_info, struct FakeInfo ***fake_crtcs, struct FakeInfo ***fake_outputs, struct FakeInfo ***fake_modes) {
@@ -189,58 +186,6 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 		}
 
 		config += 4 + size;
-	}
-
-	return 0;
-}
-
-
-static void close_configuration() {
-	munmap(config_file, config_file_size);
-	close(config_file_fd);
-	config_file = NULL;
-}
-
-static int open_configuration() {
-	// Load the configuration from ${XDG_CONFIG_HOME:-$HOME/.config}/fakexrandr.bin
-	if(config_file) {
-		close_configuration();
-	}
-
-	char *config_dir = getenv("XDG_CONFIG_HOME");
-	if(!config_dir) {
-		char *home_dir = getenv("HOME");
-		if(!home_dir) {
-			return 1;
-		}
-		config_dir = alloca(512);
-		if(snprintf(config_dir, 512, "%s/.config", home_dir) >= 512) {
-			return 1;
-		}
-	}
-
-	char config_file_path[512];
-	if(snprintf(config_file_path, 512, "%s/fakexrandr.bin", config_dir) >= 512) {
-		return 1;
-	}
-	if(access(config_file_path, R_OK)) {
-		return 1;
-	}
-
-	config_file_fd = open(config_file_path, O_RDONLY);
-	if(config_file_fd < 0) {
-		perror("fakexrandr/open()");
-		return 1;
-	}
-	struct stat config_stat;
-	fstat(config_file_fd, &config_stat);
-	config_file_size = config_stat.st_size;
-	config_file = mmap(NULL, config_file_size, PROT_READ, MAP_SHARED, config_file_fd, 0);
-	if(config_file == MAP_FAILED) {
-		perror("fakexrandr/mmap()");
-		config_file = NULL;
-		close(config_file_fd);
-		return 1;
 	}
 
 	return 0;
