@@ -38,11 +38,14 @@
 	information on the fake outputs.
 */
 
-static char * _config_foreach_split(char * config, unsigned int * n, unsigned int x, unsigned int y, unsigned int width, unsigned int height, XRRScreenResources * resources, RROutput output, XRROutputInfo * output_info,
-		XRRCrtcInfo * crtc_info) {
+static char * _config_foreach_split(char * config, unsigned int * n, unsigned int x, unsigned int y, unsigned int width,
+        unsigned int height, xcb_randr_get_screen_resources_current_reply_t * screen_resources,
+        xcb_randr_output_t output, xcb_randr_get_output_info_reply_t * output_info,
+        xcb_randr_get_crtc_info_reply_t * crtc_info) {
 
 	if (config[0] == 'N') {
 		// Define a new output info
+        /*
 		**fake_outputs = malloc(sizeof(struct FakeInfo) + sizeof(XRROutputInfo) + output_info->nameLen + sizeof("~NNN ") + sizeof(RRCrtc) + sizeof(RROutput) * output_info->nclone + (1 + output_info->nmode) * sizeof(RRMode));
 		(**fake_outputs)->xid = (output & ~XID_SPLIT_MASK) | ((++(*n)) << XID_SPLIT_SHIFT);
 		(**fake_outputs)->parent_xid = output;
@@ -110,24 +113,25 @@ static char * _config_foreach_split(char * config, unsigned int * n, unsigned in
 
 		*fake_modes = &(**fake_modes)->next;
 		**fake_modes = NULL;
+        */
 
 		return config + 1;
 	}
 	unsigned int split_pos = *(unsigned int *)&config[1];
 	if(config[0] == 'H') {
-		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
-		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, screen_resources, output, output_info, crtc_info);
+		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, screen_resources, output, output_info, crtc_info);
 	}
 	else {
 		assert(config[0] == 'V');
 
-		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
-		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
+		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, screen_resources, output, output_info, crtc_info);
+		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, screen_resources, output, output_info, crtc_info);
 	}
 }
 
 // (nms): this is now specific to the `RRGetScreenResourcesCurrent` request, not both it and `RRGetScreenResources`
-static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resources_current_reply_t * reply,
+static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resources_current_reply_t * screen_resources,
         xcb_randr_output_t output, char * target_edid) {
     char * config;
     for (config = config_file; (int)(config - config_file) <= (int)config_file_size; ) {
@@ -139,19 +143,22 @@ static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resou
         unsigned int height = *(unsigned int *)&config[4 + 128 + 768 + 4];
         unsigned int count = *(unsigned int *)&config[4 + 128 + 768 + 4 + 4];
 
-        xcb_randr_get_output_info_cookie_t * 
-
         if (strncmp(edid, target_edid, 768) == 0) {
-            xcb_randr_output_t * output 
-            XRROutputInfo * output_info = _XRRGetOutputInfo(dpy, resources, output);
-            XRRCrtcInfo * output_crtc = _XRRGetCrtcInfo(dpy, resources, output_info->crtc);
+            xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(c, output, screen_resources->config_timestamp);
+            xcb_randr_get_output_info_reply_t * output_info = xcb_randr_get_output_info_reply(c, output_info_cookie, NULL); // TODO(nms): error handling
 
-            if (output_crtc->width == (int)width && output_crtc->height == (int)height) {
+            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie = xcb_randr_get_crtc_info(c, output_info->crtc, screen_resources->config_timestamp);
+            xcb_randr_get_crtc_info_reply_t * crtc_info = xcb_randr_get_crtc_info_reply(c, crtc_info_cookie, NULL); // TODO(nms): error handling
+
+            if (crtc_info->width == (int)width && crtc_info->height == (int)height) {
                 // If it is found and the size matches, add fake outputs/crtcs to the list
                 int n = 0;
-                _config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, resources, output, output_info, output_crtc, fake_crtcs, fake_outputs, fake_modes);
+                _config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, screen_resources, output, output_info, crtc_info);
                 return 1;
             }
+
+            free(output_info);
+            free(crtc_info);
         }
 
         config += 4 + size;
@@ -168,21 +175,17 @@ static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resou
 
 static int get_output_edid(xcb_connection_t * c, xcb_randr_output_t output, char * edid) {
     xcb_intern_atom_cookie_t edid_atom_cookie = xcb_intern_atom(c, 1, 4, "EDID"); // 4 == strlen("EDID")
-    xcb_intern_atom_reply_t * edid_atom_reply = xcb_intern_atom_reply(c, edid_atom_cookie, NULL); // TODO(nms): error handling
+    xcb_intern_atom_reply_t * edid_atom = xcb_intern_atom_reply(c, edid_atom_cookie, NULL); // TODO(nms): error handling
 
-	xcb_randr_get_output_property_cookie_t edid_prop_cookie = xcb_randr_get_output_property(c, output, edid_atom_reply->atom, 0, 0, 384, 0, 0);
-    xcb_randr_get_output_property_reply_t * edid_prop_reply = xcb_randr_get_output_property_reply(c, edid_prop_cookie, NULL); // TODO(nms): error handling
+	xcb_randr_get_output_property_cookie_t edid_prop_cookie = xcb_randr_get_output_property(c, output, edid_atom->atom, 0, 0, 384, 0, 0);
+    xcb_randr_get_output_property_reply_t * edid_prop = xcb_randr_get_output_property_reply(c, edid_prop_cookie, NULL); // TODO(nms): error handling
 
-    // (nms): THIS HAS BEEN ADDRESSED IN THE for LOOP HERE - make the issue on github for phillip
-    // (nms): umm... according to the Xrandr proto spec, I believe this method needs to take into account the `format`
-    // of the property, which apparently can vary between 8, 16, and 32 (bits, I assume)
-    // I'm guessing the EDID property is always 8 bits, which is why this works using `num_items` directly, but it's
-    // misleading
-	if (edid_prop_reply->num_items > 0) {
-        int8_t * prop = xcb_randr_get_output_property_data(edid_prop_reply);
+    // EDID property is 8 bits (format = 8), according to protocol spec, num_items and xcb's length methods work equally
+	if (edid_prop->num_items > 0) {
+        int8_t * prop = xcb_randr_get_output_property_data(edid_prop);
         
 		int i;
-		for (i = 0; i < xcb_randr_get_output_property_data_length(edid_prop_reply); i++) {
+		for (i = 0; i < xcb_randr_get_output_property_data_length(edid_prop); i++) {
 			edid[2*i] = ((prop[i] >> 4) & 0xf) + '0';
 			if (edid[2*i] > '9') {
 				edid[2*i] += 'a' - '0' - 10;
@@ -193,15 +196,15 @@ static int get_output_edid(xcb_connection_t * c, xcb_randr_output_t output, char
 				edid[2*i+1] += 'a' - '0' - 10;
 			}
 		}
-		edid[xcb_randr_get_output_property_data_length(edid_prop_reply)*2] = 0; // (nms): overflow? what's going on with the edid buffer?
+		edid[xcb_randr_get_output_property_data_length(edid_prop)*2] = 0; // (nms): overflow? what's going on with the edid buffer?
 
-		free(edid_prop_reply);
+		free(edid_prop);
 	}
 
-    free(edid_atom_reply);
+    free(edid_atom);
 
     // (nms): why multiply by 2?  why num_items based return value at all?
-	return edid_prop_reply->num_items * 2;
+	return edid_prop->num_items * 2;
 }
 
 static void _init() __attribute__((constructor));
@@ -223,34 +226,38 @@ static void _init() {
 xcb_randr_get_screen_resources_current_reply_t *xcb_randr_get_screen_resources_current_reply(xcb_connection_t *c,
 		xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t **e) {
 
-    xcb_randr_get_screen_resources_current_reply_t * reply;
-    xcb_randr_output_t * outputs;
-    int i;
+    xcb_randr_get_screen_resources_current_reply_t * screen_resources =
+        _xcb_randr_get_screen_resources_current_reply(c, cookie, e);
 
-    reply = _xcb_randr_get_screen_resources_current_reply(c, cookie, e);
-    
-    // augment reply as necessary from configuration
-    
 	if (open_configuration()) {
-        return reply;
+        return screen_resources;
     }
 
-    outputs = xcb_randr_get_screen_resources_current_outputs(reply);
+
+    xcb_generic_iterator_t prev = xcb_randr_get_screen_resources_current_crtcs_end(screen_resources);
+    printf("crtcs_end: %p\npad: %d", prev.data, XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
+    (xcb_randr_output_t *) ((char *) prev.data + XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
+
+
+    // augment reply as necessary from configuration
+    
+    xcb_randr_output_t * outputs = xcb_randr_get_screen_resources_current_outputs(screen_resources);
 
     // use fn for length, rather than reply->num_outputs, just to be safe
-    for (i = 0; i < xcb_randr_get_screen_resources_current_outputs_length(reply); ++i) {
+    int i;
+    for (i = 0; i < xcb_randr_get_screen_resources_current_outputs_length(screen_resources); ++i) {
         xcb_randr_output_t * output = &outputs[i];
         char output_edid[768];
         if (get_output_edid(c, *output, output_edid) > 0) {
-            config_handle_output(c, reply, *output, output_edid);
+            config_handle_output(c, screen_resources, *output, output_edid);
         }
     }
 
-	return reply;
+	return screen_resources;
 }
 
 xcb_randr_get_screen_resources_reply_t *xcb_randr_get_screen_resources_reply(xcb_connection_t *c,
-		xcb_randr_get_screen_resources_cookie_t cookie, xcb_generic_error_t **e) {
+        xcb_randr_get_screen_resources_cookie_t cookie, xcb_generic_error_t **e) {
 
 	printf("Get screen resources reply\n");
 	return _xcb_randr_get_screen_resources_reply(c, cookie, e);
