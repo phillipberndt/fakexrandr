@@ -56,6 +56,8 @@ try:
             print >> sys.stderr, "Warning: Failed to use the real XrandR library; falling back to the fake one."
     libX11.XOpenDisplay.restype = ctypes.c_voidp
     display = libX11.XOpenDisplay("")
+    if not display:
+        raise RuntimeError("Failed to open X11 display")
     HAS_X11_DISPLAY=True
 except:
     HAS_X11_DISPLAY=False
@@ -65,6 +67,8 @@ except:
 def require_x11():
     if not HAS_X11_DISPLAY:
         print("The GUI requires ctypes to be able to open libX11.so and an X Display", file=sys.stderr)
+        if "DISPLAY" not in os.environ or not os.environ["DISPLAY"]:
+            print("The DISPLAY environment variable is not set!", file=sys.stderr)
         sys.exit(1)
 
 " }}}"
@@ -79,7 +83,8 @@ class XRRScreenResources(ctypes.Structure):
                 ("outputs", ctypes.POINTER(ctypes.c_long)),
                 ("nmode", ctypes.c_int),
                 ("modes", ctypes.POINTER(ctypes.c_long))]
-libXrandr.XRRGetScreenResources.restype = ctypes.POINTER(XRRScreenResources)
+if HAS_X11_DISPLAY:
+    libXrandr.XRRGetScreenResources.restype = ctypes.POINTER(XRRScreenResources)
 
 class XRROutputInfo(ctypes.Structure):
     _fields_ = [("timestamp", ctypes.c_ulong),
@@ -98,7 +103,8 @@ class XRROutputInfo(ctypes.Structure):
                 ("npreferec", ctypes.c_int),
                 ("modes", ctypes.POINTER(ctypes.c_long))
                ]
-libXrandr.XRRGetOutputInfo.restype = ctypes.POINTER(XRROutputInfo)
+if HAS_X11_DISPLAY:
+    libXrandr.XRRGetOutputInfo.restype = ctypes.POINTER(XRROutputInfo)
 
 class XRRCrtcInfo(ctypes.Structure):
     _fields_ = [("timestamp", ctypes.c_ulong),
@@ -113,10 +119,12 @@ class XRRCrtcInfo(ctypes.Structure):
                 ("rotations", ctypes.c_ushort),
                 ("npossible", ctypes.c_int),
                 ("possible", ctypes.POINTER(ctypes.c_long))]
-libXrandr.XRRGetCrtcInfo.restype = ctypes.POINTER(XRRCrtcInfo)
-libXrandr.XRRListOutputProperties.restype = ctypes.POINTER(ctypes.c_voidp)
-libX11.XGetAtomName.restype = ctypes.c_char_p
-libX11.XInternAtom.restype = ctypes.c_long
+
+if HAS_X11_DISPLAY:
+    libXrandr.XRRGetCrtcInfo.restype = ctypes.POINTER(XRRCrtcInfo)
+    libXrandr.XRRListOutputProperties.restype = ctypes.POINTER(ctypes.c_voidp)
+    libX11.XGetAtomName.restype = ctypes.c_char_p
+    libX11.XInternAtom.restype = ctypes.c_long
 
 def query_xrandr():
     root_window = libX11.XDefaultRootWindow(display)
