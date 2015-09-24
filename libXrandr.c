@@ -248,6 +248,7 @@ static int open_configuration() {
 
 	config_file_fd = open(config_file_path, O_RDONLY);
 	if(config_file_fd < 0) {
+		perror("fakexrandr/open()");
 		return 1;
 	}
 	struct stat config_stat;
@@ -255,6 +256,7 @@ static int open_configuration() {
 	config_file_size = config_stat.st_size;
 	config_file = mmap(NULL, config_file_size, PROT_READ, MAP_SHARED, config_file_fd, 0);
 	if(config_file == MAP_FAILED) {
+		perror("fakexrandr/mmap()");
 		config_file = NULL;
 		close(config_file_fd);
 		return 1;
