@@ -247,11 +247,15 @@ static int open_configuration() {
 	}
 
 	config_file_fd = open(config_file_path, O_RDONLY);
+	if(config_file_fd < 0) {
+		return 1;
+	}
 	struct stat config_stat;
 	fstat(config_file_fd, &config_stat);
 	config_file_size = config_stat.st_size;
 	config_file = mmap(NULL, config_file_size, PROT_READ, MAP_SHARED, config_file_fd, 0);
-	if(!config_file) {
+	if(config_file == MAP_FAILED) {
+		config_file = NULL;
 		close(config_file_fd);
 		return 1;
 	}
