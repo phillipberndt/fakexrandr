@@ -58,6 +58,7 @@ try:
     display = libX11.XOpenDisplay("")
     if not display:
         raise RuntimeError("Failed to open X11 display")
+    display = ctypes.c_void_p(display)
     HAS_X11_DISPLAY=True
 except:
     HAS_X11_DISPLAY=False
