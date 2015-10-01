@@ -101,7 +101,7 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 
 	if(config[0] == 'N') {
 		// Define a new output info
-		**fake_outputs = malloc(sizeof(struct FakeInfo) + sizeof(XRROutputInfo) + output_info->nameLen + sizeof("~NNN ") + sizeof(RRCrtc) + sizeof(RROutput) * output_info->nclone + (1 + output_info->nmode) * sizeof(RRMode));
+		**fake_outputs = Xmalloc(sizeof(struct FakeInfo) + sizeof(XRROutputInfo) + output_info->nameLen + sizeof("~NNN ") + sizeof(RRCrtc) + sizeof(RROutput) * output_info->nclone + (1 + output_info->nmode) * sizeof(RRMode));
 		(**fake_outputs)->xid = (output & ~XID_SPLIT_MASK) | ((++(*n)) << XID_SPLIT_SHIFT);
 		(**fake_outputs)->parent_xid = output;
 		XRROutputInfo *fake_info = (**fake_outputs)->info = (void*)**fake_outputs + sizeof(struct FakeInfo);
@@ -130,7 +130,7 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 		**fake_outputs = NULL;
 
 		// Define a new CRTC info
-		**fake_crtcs = malloc(sizeof(struct FakeInfo) + sizeof(XRRCrtcInfo) + sizeof(RROutput));
+		**fake_crtcs = Xmalloc(sizeof(struct FakeInfo) + sizeof(XRRCrtcInfo) + sizeof(RROutput));
 		(**fake_crtcs)->xid = (output_info->crtc & ~XID_SPLIT_MASK) | ((*n) << XID_SPLIT_SHIFT);
 		(**fake_crtcs)->parent_xid = output_info->crtc;
 		XRRCrtcInfo *fake_crtc_info = (**fake_crtcs)->info = ((void*)**fake_crtcs) + sizeof(struct FakeInfo);
@@ -150,7 +150,7 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 		**fake_crtcs = NULL;
 
 		// Define a new fake mode
-		**fake_modes = calloc(1, sizeof(struct FakeInfo) + sizeof(XRRModeInfo) + sizeof("XXXXxXXXX"));
+		**fake_modes = Xcalloc(1, sizeof(struct FakeInfo) + sizeof(XRRModeInfo) + sizeof("XXXXxXXXX"));
 		(**fake_modes)->xid = (output_info->crtc & ~XID_SPLIT_MASK) | ((*n) << XID_SPLIT_SHIFT);
 		(**fake_modes)->parent_xid = 0;
 		XRRModeInfo *fake_mode_info = (**fake_modes)->info = (void*)**fake_modes + sizeof(struct FakeInfo);
@@ -317,7 +317,7 @@ static void free_list(struct FakeInfo *list) {
 	while(list) {
 		struct FakeInfo *last = list;
 		list = list->next;
-		free(last);
+		Xfree(last);
 	}
 }
 
@@ -344,7 +344,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 
 	// Fill the FakeInfo structures
 	if(open_configuration()) {
-		struct FakeScreenResources *retval = calloc(1, sizeof(struct FakeScreenResources));
+		struct FakeScreenResources *retval = Xcalloc(1, sizeof(struct FakeScreenResources));
 		retval->res = *res;
 		retval->parent_res = res;
 		return retval;
@@ -363,7 +363,7 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	int nmodes = res->nmode + list_length(modes);
 
 	// Create a new XRRScreenResources with the fake information in place
-	struct FakeScreenResources *retval = malloc(sizeof(struct FakeScreenResources) + ncrtc * sizeof(RRCrtc) + noutput * sizeof(RROutput) + nmodes * sizeof(XRRModeInfo));
+	struct FakeScreenResources *retval = Xmalloc(sizeof(struct FakeScreenResources) + ncrtc * sizeof(RRCrtc) + noutput * sizeof(RROutput) + nmodes * sizeof(XRRModeInfo));
 
 	retval->res = *res;
 	retval->parent_res = res;
@@ -448,7 +448,7 @@ void XRRFreeScreenResources(XRRScreenResources *resources) {
 	free_list(res->fake_crtcs);
 	free_list(res->fake_outputs);
 	free_list(res->fake_modes);
-	free(resources);
+	Xfree(resources);
 }
 
 XRRScreenResources *XRRGetScreenResourcesCurrent(Display *dpy, Window window) {
