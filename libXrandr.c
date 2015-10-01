@@ -460,7 +460,11 @@ XRRScreenResources *XRRGetScreenResourcesCurrent(Display *dpy, Window window) {
 XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RROutput output) {
 	struct FakeInfo *fake = xid_in_list(((struct FakeScreenResources *)resources)->fake_outputs, output);
 	if(fake) {
-		return fake->info;
+		// We have to *clone* this here to mitigate issues due to the Gnome folks misusing the API, see
+		// gnome bugzilla #755934
+		XRROutputInfo *retval = Xmalloc(sizeof(XRROutputInfo));
+		memcpy(retval, fake->info, sizeof(XRROutputInfo));
+		return retval;
 	}
 
 	XRROutputInfo *retval = _XRRGetOutputInfo(dpy, resources, output & ~XID_SPLIT_MASK);
@@ -468,14 +472,18 @@ XRROutputInfo *XRRGetOutputInfo(Display *dpy, XRRScreenResources *resources, RRO
 }
 
 void XRRFreeOutputInfo(XRROutputInfo *outputInfo) {
-	// TODO This _might_ be a dynamic info that ought to be freed
-	// Intentionally empty.
+	// Note: If I can ever remove the cloning of the XRROutputInfo above, this won't work anymore!
+	_XRRFreeOutputInfo(outputInfo);
 }
 
 XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc crtc) {
 	struct FakeInfo *fake = xid_in_list(((struct FakeScreenResources *)resources)->fake_crtcs, crtc);
 	if(fake) {
-		return fake->info;
+		// We have to *clone* this here to mitigate issues due to the Gnome folks misusing the API, see
+		// gnome bugzilla #755934
+		XRRCrtcInfo *retval = Xmalloc(sizeof(XRRCrtcInfo));
+		memcpy(retval, fake->info, sizeof(XRRCrtcInfo));
+		return retval;
 	}
 
 	XRRCrtcInfo *retval = _XRRGetCrtcInfo(dpy, resources, crtc & ~XID_SPLIT_MASK);
@@ -483,8 +491,8 @@ XRRCrtcInfo *XRRGetCrtcInfo(Display *dpy, XRRScreenResources *resources, RRCrtc 
 }
 
 void XRRFreeCrtcInfo(XRRCrtcInfo *crtcInfo) {
-	// TODO This _might_ be a dynamic info that ought to be freed
-	// Intentionally empty.
+	// Note: If I can ever remove the cloning of the XRROutputInfo above, this won't work anymore!
+	_XRRFreeCrtcInfo(crtcInfo);
 }
 
 int XRRSetCrtcConfig(Display *dpy, XRRScreenResources *resources, RRCrtc crtc, Time timestamp, int x, int y, RRMode mode, Rotation rotation, RROutput *outputs, int noutputs) {
