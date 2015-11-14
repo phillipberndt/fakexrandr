@@ -197,7 +197,14 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 
 		if(strncmp(edid, target_edid, 768) == 0) {
 			XRROutputInfo *output_info = _XRRGetOutputInfo(dpy, resources, output);
+			if(!output_info || output_info->crtc == 0) {
+				return 0;
+			}
+
 			XRRCrtcInfo *output_crtc = _XRRGetCrtcInfo(dpy, resources, output_info->crtc);
+			if(!output_crtc) {
+				return 0;
+			}
 
 			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
 				// If it is found and the size matches, add fake outputs/crtcs to the list
