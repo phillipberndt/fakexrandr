@@ -289,15 +289,20 @@ static int open_configuration() {
 	edid must point to a sufficiently large (768 bytes) buffer.
 */
 static int get_output_edid(Display *dpy, RROutput output, char *edid) {
+	Atom edid_atom;
 	Atom actual_type;
 	unsigned int actual_format;
 	unsigned long nitems;
 	unsigned long bytes_after;
 	unsigned char *prop;
 
-	_XRRGetOutputProperty(dpy, output, XInternAtom(dpy, "EDID", 1), 0, 384,
-			0, 0, 0, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+	edid_atom = XInternAtom(dpy, "EDID", 1);
+	if(!edid_atom) {
+		return 0;
+	}
 
+	_XRRGetOutputProperty(dpy, output, edid_atom, 0, 384,
+			0, 0, 0, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
 	if(nitems > 0) {
 		int i;
 		for(i=0; i<nitems; i++) {
