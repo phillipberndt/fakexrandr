@@ -173,12 +173,18 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 	}
 	unsigned int split_pos = *(unsigned int *)&config[1];
 	if(config[0] == 'H') {
+		if(split_pos == 0) {
+			split_pos = height / 2;
+		}
 		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
 	else {
 		assert(config[0] == 'V');
 
+		if(split_pos == 0) {
+			split_pos = width / 2;
+		}
 		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
