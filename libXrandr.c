@@ -296,6 +296,8 @@ static int get_output_edid(Display *dpy, RROutput output, char *edid) {
 	unsigned long bytes_after;
 	unsigned char *prop;
 
+	edid[0] = 0;
+
 	edid_atom = XInternAtom(dpy, "EDID", 1);
 	if(!edid_atom) {
 		return 0;
@@ -376,9 +378,8 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	int i;
 	for(i=0; i<res->noutput; i++) {
 		char output_edid[768];
-		if(get_output_edid(dpy, res->outputs[i], output_edid) > 0) {
-			config_handle_output(dpy, res, res->outputs[i], output_edid, &crtcs_end, &outputs_end, &modes_end);
-		}
+		get_output_edid(dpy, res->outputs[i], output_edid);
+		config_handle_output(dpy, res, res->outputs[i], output_edid, &crtcs_end, &outputs_end, &modes_end);
 	}
 
 	int ncrtc = res->ncrtc + list_length(crtcs);
