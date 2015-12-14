@@ -702,10 +702,11 @@ def perform_action(action):
               "  EDID, WIDTH, HEIGHT and SPLITS. SPLITS is a string describing how an output\n"
               "  shall be split. It starts by one of the letters H, V or N, describing the\n"
               "  kind of split. H means horizontal, V vertical and N no split. Separated by a\n"
-              "  space follows the pixel position of the split. Again separated by a space\n"
-              "  follow the two sub-configurations of the left/right or top/bottom halves. Any\n"
-              "  additional white-space besides a single space is optional any only serves\n"
-              "  better readibility. dump-config indents sub-configurations to this end.\n"
+              "  space follows the pixel position of the split. When specifying 0, the available\n"
+              "  width or height is divided equally and used as split position. Again separated\n"
+              "  by a space follow the two sub-configurations of the left/right or top/bottom\n"
+              "  halves. Any additional white-space besides a single space is optional any only\n"
+              "  serves better readibility. dump-config indents sub-configurations to this end.\n"
               "  If SPLITS equals N, a configuration is discarded upon saving it.\n"
               "\n")
 
