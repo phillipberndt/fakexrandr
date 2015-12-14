@@ -211,7 +211,12 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 			if(!output_crtc) {
 				return 0;
 			}
-
+			if(width == 0) {
+				width = output_crtc->width;
+			}
+			if(height == 0) {
+				height = output_crtc->height;
+			}
 			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
 				// If it is found and the size matches, add fake outputs/crtcs to the list
 				int n = 0;
