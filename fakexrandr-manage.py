@@ -145,7 +145,7 @@ def query_xrandr():
     for i in range(screen_resources.contents.noutput):
         out = libXrandr.XRRGetOutputInfo(display, screen_resources, screen_resources.contents.outputs[i])
 
-        if out.contents.crtc == 0:
+        if out.contents.crtc == 0 or not edidAtom:
             continue
 
         actual_type = ctypes.c_long()
