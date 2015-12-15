@@ -177,10 +177,47 @@ class Configuration(object):
         self.edid = edid
         self.width = width
         self.height = height
+        self.__adjust_unstored_size()
         self.name = name
         # Split syntax:
         # split: [HV] <split position> {split} {split} | N
         self.splits = [ ]
+
+    def _adjust_unstored_size(self):
+        assert not hasattr(self, "size_is_stored")
+        width, height = self.width, self.height
+        if width > 0 and height > 0:
+            self.size_is_stored = True
+        else:
+            self.size_is_stored = False
+            self._original_width_height = (self.width, self.height)
+            self.width = 1600.
+            self.height = 900.
+            def _fix(split):
+                if not split or split[0] == "N":
+                    return
+                elif split[0] == "H":
+                    split[1] *= self.height / 1000.
+                elif split[0] == "V":
+                    split[1] *= self.width / 1000.
+                _fix(split[2])
+                _fix(split[3])
+            _fix(self.splits)
+
+    def _unadjust_unstored_size(self):
+        if not self.size_is_stored:
+            def _fix(split):
+                if not split or split[0] == "N":
+                    return
+                elif split[0] == "H":
+                    split[1] /= self.height / 1000.
+                elif split[0] == "V":
+                    split[1] /= self.width / 1000.
+                _fix(split[2])
+                _fix(split[3])
+            _fix(self.splits)
+            self.width, self.height = self._original_width_height
+        del self.size_is_stored
 
     @property
     def ascii_name(self):
@@ -228,7 +265,7 @@ class Configuration(object):
             pos = tokens.pop(0)
             left = _build()
             right = _build()
-            return [ stype, pos, left, right ]
+            return [ stype, int(pos), left, right ]
         self.splits = _build()
 
     @property
@@ -255,7 +292,10 @@ class Configuration(object):
 
     @property
     def formatted_name(self):
-        return "{c.name}@{c.width}x{c.height}".format(c=self)
+        if self.size_is_stored:
+            return "{c.name}@{c.width}x{c.height}".format(c=self)
+        else:
+            return self.name
 
     def __eq__(self, other):
         return other.edid == self.edid and self.width == other.width and self.height == other.height
@@ -263,7 +303,10 @@ class Configuration(object):
     def __str__(self):
         assert len(self.edid) <= 768
         assert len(self.name) <= 128
-        return b"".join([struct.pack("128s768sIII", self.name, self.edid, int(self.width), int(self.height), self.splits_count), self.splits_str])
+        self._unadjust_unstored_size()
+        rv = b"".join([struct.pack("128s768sIII", self.name, self.edid, int(self.width), int(self.height), self.splits_count), self.splits_str])
+        self._adjust_unstored_size()
+        return rv
     __bytes__ = __str__
 
     @classmethod
@@ -276,7 +319,16 @@ class Configuration(object):
         obj.splits_str = string[128+768+4*3:]
         obj.height = float(obj.height)
         obj.width = float(obj.width)
+        obj._adjust_unstored_size()
         return obj
+
+    @property
+    def parseable_properties(self):
+        self._unadjust_unstored_size()
+        rv = ("NAME=\"%s\"\nEDID=%s\nWIDTH=%d\nHEIGHT=%d\nSPLITS=\"%s\"" % (self.name.decode(), self.edid.decode(), self.width, self.height,
+                                                                           self.human_readable_splits_str))
+        self._adjust_unstored_size()
+        return rv
 
     @classmethod
     def new_from_shdict(cls, variables):
@@ -286,6 +338,7 @@ class Configuration(object):
         obj.height = float(variables["HEIGHT"])
         obj.width = float(variables["WIDTH"])
         obj.human_readable_splits_str = variables["SPLITS"]
+        obj._adjust_unstored_size()
         return obj
 
 def base_coordinates(splits):
@@ -644,8 +697,7 @@ def perform_action(action):
         if os.access(CONFIGURATION_FILE_PATH, os.R_OK):
             try:
                 for config in unserialize_configurations(open(CONFIGURATION_FILE_PATH, "rb").read()):
-                    print("NAME=\"%s\"\nEDID=%s\nWIDTH=%d\nHEIGHT=%d" % (config.name.decode(), config.edid.decode(), config.width, config.height))
-                    print("SPLITS=\"%s\"" % config.human_readable_splits_str)
+                    print(config.parseable_properties)
                     print()
             except:
                 print("Failed to load configurations from %s" % CONFIGURATION_FILE_PATH, file=sys.stderr)
