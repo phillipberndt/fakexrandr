@@ -45,7 +45,7 @@ CONFIGURATION_FILE_PATH = os.path.expanduser("~/.config/fakexrandr.bin")
 try:
     libX11 = ctypes.CDLL("libX11.so")
     # Prefer Xrandr from one of the default directories over a fake version
-    for directory in ("/usr/lib/x86_64-linux-gnu/", "/usr/lib", "/lib/x86_64-linux-gnu/", "/lib", "/usr/lib/i386-linux-gnu/", "/lib/i386-linux-gnu/"):
+    for directory in ("/usr/lib/x86_64-linux-gnu/", "/usr/lib", "/lib/x86_64-linux-gnu/", "/lib", "/usr/lib/i386-linux-gnu/", "/lib/i386-linux-gnu/", "/usr/lib64"):
         Xrandr_path = os.path.join(directory, "libXrandr.so")
         if os.path.isfile(Xrandr_path):
             libXrandr = ctypes.CDLL(Xrandr_path)
