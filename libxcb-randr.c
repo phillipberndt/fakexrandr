@@ -31,6 +31,35 @@
 #include "skeleton-xcb.h"
 
 /*
+	We use an augmented version of the screen resources to store all our
+	information: We preallocate all XRROutputInfo and XRRCrtcInfo structures
+	for the fake screens upon a request for screen resources and only return
+	pointers in the functions that return them.
+*/
+struct FakeInfo {
+	uint32_t xid; // typeof xcb_randr_crtc_t, xcb_randr_output_t, xcb_randr_mode_t
+	uint32_t parent_xid;
+	void * info;
+	struct FakeInfo * next;
+};
+
+/*
+struct FakeScreenResources {
+	// This is crafted to look like a XRRScreenResources to an unaware user
+	XRRScreenResources res;
+
+	// This points to the original screen resources. We don't free them to
+	// be able to use the original strings/lists without having to copy them.
+	XRRScreenResources *parent_res;
+
+	// These lists point to the fake OutputInfo/CrtcInfo/Mode structures
+	struct FakeInfo *fake_crtcs;
+	struct FakeInfo *fake_outputs;
+	struct FakeInfo *fake_modes;
+};
+*/
+
+/*
 	Configuration management
 
 	The configuration file format is documented in the management script. These
@@ -41,12 +70,12 @@
 static char * _config_foreach_split(char * config, unsigned int * n, unsigned int x, unsigned int y, unsigned int width,
         unsigned int height, xcb_randr_get_screen_resources_current_reply_t * screen_resources,
         xcb_randr_output_t output, xcb_randr_get_output_info_reply_t * output_info,
-        xcb_randr_get_crtc_info_reply_t * crtc_info) {
+        xcb_randr_get_crtc_info_reply_t * crtc_info, xcb_randr_crtc_t *** fake_crtcs,
+        xcb_randr_output_t *** fake_outputs, xcb_randr_mode_info_t *** fake_mode_infos) {
 
 	if (config[0] == 'N') {
 		// Define a new output info
-        /*
-		**fake_outputs = malloc(sizeof(struct FakeInfo) + sizeof(XRROutputInfo) + output_info->nameLen + sizeof("~NNN ") + sizeof(RRCrtc) + sizeof(RROutput) * output_info->nclone + (1 + output_info->nmode) * sizeof(RRMode));
+		**fake_outputs = malloc(sizeof(struct FakeInfo) + sizeof(xcb_randr_output_info_t) + output_info->nameLen + sizeof("~NNN ") + sizeof(RRCrtc) + sizeof(RROutput) * output_info->nclone + (1 + output_info->nmode) * sizeof(RRMode));
 		(**fake_outputs)->xid = (output & ~XID_SPLIT_MASK) | ((++(*n)) << XID_SPLIT_SHIFT);
 		(**fake_outputs)->parent_xid = output;
 		XRROutputInfo *fake_info = (**fake_outputs)->info = (void*)**fake_outputs + sizeof(struct FakeInfo);
@@ -132,7 +161,8 @@ static char * _config_foreach_split(char * config, unsigned int * n, unsigned in
 
 // (nms): this is now specific to the `RRGetScreenResourcesCurrent` request, not both it and `RRGetScreenResources`
 static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resources_current_reply_t * screen_resources,
-        xcb_randr_output_t output, char * target_edid) {
+        xcb_randr_output_t output, char * target_edid, xcb_randr_crtc_t *** fake_crtcs,
+        xcb_randr_output_t *** fake_outputs, xcb_randr_mode_info_t *** fake_mode_infos) {
     char * config;
     for (config = config_file; (int)(config - config_file) <= (int)config_file_size; ) {
         // Walk through the configuration file and search for the target_edid
@@ -144,16 +174,20 @@ static int config_handle_output(xcb_connection_t * c, xcb_randr_get_screen_resou
         unsigned int count = *(unsigned int *)&config[4 + 128 + 768 + 4 + 4];
 
         if (strncmp(edid, target_edid, 768) == 0) {
-            xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(c, output, screen_resources->config_timestamp);
-            xcb_randr_get_output_info_reply_t * output_info = xcb_randr_get_output_info_reply(c, output_info_cookie, NULL); // TODO(nms): error handling
+            xcb_randr_get_output_info_cookie_t output_info_cookie = xcb_randr_get_output_info(c, output,
+                    screen_resources->config_timestamp);
+            xcb_randr_get_output_info_reply_t * output_info = xcb_randr_get_output_info_reply(c, output_info_cookie,
+                    NULL); // TODO(nms): error handling
 
-            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie = xcb_randr_get_crtc_info(c, output_info->crtc, screen_resources->config_timestamp);
-            xcb_randr_get_crtc_info_reply_t * crtc_info = xcb_randr_get_crtc_info_reply(c, crtc_info_cookie, NULL); // TODO(nms): error handling
+            xcb_randr_get_crtc_info_cookie_t crtc_info_cookie = xcb_randr_get_crtc_info(c, output_info->crtc,
+                    screen_resources->config_timestamp);
+            xcb_randr_get_crtc_info_reply_t * crtc_info = xcb_randr_get_crtc_info_reply(c, crtc_info_cookie, NULL);
+                    // TODO(nms): error handling
 
             if (crtc_info->width == (int)width && crtc_info->height == (int)height) {
                 // If it is found and the size matches, add fake outputs/crtcs to the list
                 int n = 0;
-                _config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, screen_resources, output, output_info, crtc_info);
+                _config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, screen_resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_mode_infos);
                 return 1;
             }
 
@@ -223,8 +257,8 @@ static void _init() {
 	Overridden library functions to add the fake output
 */
 
-xcb_randr_get_screen_resources_current_reply_t *xcb_randr_get_screen_resources_current_reply(xcb_connection_t *c,
-		xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t **e) {
+xcb_randr_get_screen_resources_current_reply_t * xcb_randr_get_screen_resources_current_reply(xcb_connection_t * c,
+		xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t ** e) {
 
     xcb_randr_get_screen_resources_current_reply_t * screen_resources =
         _xcb_randr_get_screen_resources_current_reply(c, cookie, e);
@@ -235,12 +269,20 @@ xcb_randr_get_screen_resources_current_reply_t *xcb_randr_get_screen_resources_c
 
 
     xcb_generic_iterator_t prev = xcb_randr_get_screen_resources_current_crtcs_end(screen_resources);
-    printf("crtcs_end: %p\npad: %d", prev.data, XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
-    (xcb_randr_output_t *) ((char *) prev.data + XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
+    printf("prev.data: %p\nprev.index: %d\npad: %d", prev.data, prev.index, XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
+    //(xcb_randr_output_t *) ((char *) prev.data + XCB_TYPE_PAD(xcb_randr_output_t, prev.index) + 0);
 
 
     // augment reply as necessary from configuration
     
+	xcb_randr_output_t * fake_outputs = NULL;
+	xcb_randr_crtc_t * fake_crtcs = NULL;
+	xcb_randr_mode_info_t * fake_mode_infos = NULL;
+
+	xcb_randr_output_t ** fake_outputs_end = &fake_outputs;
+	xcb_randr_crtc_t ** fake_crtcs_end = &fake_crtcs;
+	xcb_randr_mode_info_t ** fake_mode_infos_end = &fake_mode_infos;
+
     xcb_randr_output_t * outputs = xcb_randr_get_screen_resources_current_outputs(screen_resources);
 
     // use fn for length, rather than reply->num_outputs, just to be safe
@@ -249,7 +291,8 @@ xcb_randr_get_screen_resources_current_reply_t *xcb_randr_get_screen_resources_c
         xcb_randr_output_t * output = &outputs[i];
         char output_edid[768];
         if (get_output_edid(c, *output, output_edid) > 0) {
-            config_handle_output(c, screen_resources, *output, output_edid);
+            config_handle_output(c, screen_resources, *output, output_edid, &fake_crtcs_end, &fake_outputs_end,
+                    &fake_mode_infos_end);
         }
     }
 
