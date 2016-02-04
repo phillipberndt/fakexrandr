@@ -5,7 +5,7 @@ ifeq ($(shell pkg-config --errors-to-stdout --print-errors xcb-randr),)
 	XCB_TARGET=libxcb-randr.so.0
 endif
 
-all: libXrandr.so.2 libXinerama.so.1 $(XCB_TARGET)
+all: libXrandr.so.2 libXinerama.so.1 $(XCB_TARGET) xcbtest
 
 config.h: configure
 	./configure
@@ -27,6 +27,10 @@ libXinerama.so.1 libXrandr.so.2: libXrandr.so
 
 libxcb-randr.so.0: libxcb-randr.so
 	[ -e $@ ] || ln -s $< $@
+
+
+xcbtest: xcbtest.c
+	$(CC) $(CFLAG) -o $@ $< -lX11 -lXrandr -lxcb -lxcb-randr
 
 
 install: libXrandr.so
