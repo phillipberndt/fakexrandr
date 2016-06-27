@@ -38,6 +38,11 @@ try:
     HAS_GTK=True
 except ImportError:
     HAS_GTK=False
+    class Gtk(object):
+        class HBox(object):
+            pass
+        class Window(object):
+            pass
 
 CONFIGURATION_FILE_PATH = os.path.expanduser("~/.config/fakexrandr.bin")
 
@@ -349,7 +354,7 @@ class ConfigurationWidget(Gtk.HBox):
                 color_index = _draw_split(self, context, split[2], color_index)
                 context.restore()
                 context.save()
-                context.translate(0, split[1] / self._configuration.height * 300. / self._aspect_ratio)
+                context.translate(0, split[1] / (self._configuration.height or 1) * 300. / self._aspect_ratio)
                 color_index = _draw_split(self, context, split[3], color_index + 1)
                 context.restore()
             else:
@@ -357,7 +362,7 @@ class ConfigurationWidget(Gtk.HBox):
                 color_index = _draw_split(self, context, split[2], color_index)
                 context.restore()
                 context.save()
-                context.translate(split[1] / self._configuration.width * 300., 0.)
+                context.translate(split[1] / (self._configuration.width or 1) * 300., 0.)
                 color_index = _draw_split(self, context, split[3], color_index + 1)
                 context.restore()
             context.restore()
@@ -465,7 +470,7 @@ class ConfigurationWidget(Gtk.HBox):
     def __init__(self, configuration):
         self._configuration = configuration
         self._remove_observer_callbacks = []
-        self._aspect_ratio = 1.*configuration.width/configuration.height
+        self._aspect_ratio = 1.*configuration.width/configuration.height if configuration.height else 16/9.
         self._mouse_handler_mouse_down_at = False
         super(ConfigurationWidget, self).__init__()
 
