@@ -15,6 +15,11 @@ Applications using xcb will not work. See
 [issue #22](https://github.com/phillipberndt/fakexrandr/pull/22) for progress
 on xcb support.
 
+Also note: With xrandr 1.5, this library shouldn't be needed anymore for most
+users. xrandr has an abstraction for "monitors" now which should work out of
+the box, at least with applications written using one of the big GUI
+frameworks.
+
 Use cases
 ---------
 
