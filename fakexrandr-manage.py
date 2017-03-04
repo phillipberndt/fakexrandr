@@ -150,7 +150,7 @@ def query_xrandr():
     for i in range(screen_resources.contents.noutput):
         out = libXrandr.XRRGetOutputInfo(display, screen_resources, screen_resources.contents.outputs[i])
 
-        if out.contents.crtc == 0:
+        if out.contents.crtc == 0 or not edidAtom:
             continue
 
         actual_type = ctypes.c_long()
@@ -704,13 +704,15 @@ def perform_action(action):
               "\n"
               "Configuration format:\n"
               "  The CLI configuration format follows sh syntax and defines the variables NAME,\n"
-              "  EDID, WIDTH, HEIGHT and SPLITS. SPLITS is a string describing how an output\n"
+              "  EDID, WIDTH, HEIGHT and SPLITS. If WIDTH or HEIGHT is 0, the width or height of\n"
+              "  the actual output CRTC is used. SPLITS is a string describing how an output\n"
               "  shall be split. It starts by one of the letters H, V or N, describing the\n"
               "  kind of split. H means horizontal, V vertical and N no split. Separated by a\n"
-              "  space follows the pixel position of the split. Again separated by a space\n"
-              "  follow the two sub-configurations of the left/right or top/bottom halves. Any\n"
-              "  additional white-space besides a single space is optional any only serves\n"
-              "  better readibility. dump-config indents sub-configurations to this end.\n"
+              "  space follows the pixel position of the split. When specifying 0, the available\n"
+              "  width or height is divided equally and used as split position. Again separated\n"
+              "  by a space follow the two sub-configurations of the left/right or top/bottom\n"
+              "  halves. Any additional white-space besides a single space is optional any only\n"
+              "  serves better readibility. dump-config indents sub-configurations to this end.\n"
               "  If SPLITS equals N, a configuration is discarded upon saving it.\n"
               "\n")
 

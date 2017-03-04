@@ -173,12 +173,18 @@ static char *_config_foreach_split(char *config, unsigned int *n, unsigned int x
 	}
 	unsigned int split_pos = *(unsigned int *)&config[1];
 	if(config[0] == 'H') {
+		if(split_pos == 0) {
+			split_pos = height / 2;
+		}
 		config = _config_foreach_split(config + 1 + 4, n, x, y, width, split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 		return _config_foreach_split(config, n, x, y + split_pos, width, height - split_pos, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
 	else {
 		assert(config[0] == 'V');
 
+		if(split_pos == 0) {
+			split_pos = width / 2;
+		}
 		config = _config_foreach_split(config + 1 + 4, n, x, y, split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 		return _config_foreach_split(config, n, x + split_pos, y, width - split_pos, height, resources, output, output_info, crtc_info, fake_crtcs, fake_outputs, fake_modes);
 	}
@@ -205,7 +211,12 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 			if(!output_crtc) {
 				return 0;
 			}
-
+			if(width == 0) {
+				width = output_crtc->width;
+			}
+			if(height == 0) {
+				height = output_crtc->height;
+			}
 			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
 				// If it is found and the size matches, add fake outputs/crtcs to the list
 				int n = 0;
@@ -278,15 +289,22 @@ static int open_configuration() {
 	edid must point to a sufficiently large (768 bytes) buffer.
 */
 static int get_output_edid(Display *dpy, RROutput output, char *edid) {
+	Atom edid_atom;
 	Atom actual_type;
 	unsigned int actual_format;
 	unsigned long nitems;
 	unsigned long bytes_after;
 	unsigned char *prop;
 
-	_XRRGetOutputProperty(dpy, output, XInternAtom(dpy, "EDID", 1), 0, 384,
-			0, 0, 0, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+	edid[0] = 0;
 
+	edid_atom = XInternAtom(dpy, "EDID", 1);
+	if(!edid_atom) {
+		return 0;
+	}
+
+	_XRRGetOutputProperty(dpy, output, edid_atom, 0, 384,
+			0, 0, 0, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
 	if(nitems > 0) {
 		int i;
 		for(i=0; i<nitems; i++) {
@@ -360,9 +378,8 @@ static struct FakeScreenResources *augment_resources(Display *dpy, XRRScreenReso
 	int i;
 	for(i=0; i<res->noutput; i++) {
 		char output_edid[768];
-		if(get_output_edid(dpy, res->outputs[i], output_edid) > 0) {
-			config_handle_output(dpy, res, res->outputs[i], output_edid, &crtcs_end, &outputs_end, &modes_end);
-		}
+		get_output_edid(dpy, res->outputs[i], output_edid);
+		config_handle_output(dpy, res, res->outputs[i], output_edid, &crtcs_end, &outputs_end, &modes_end);
 	}
 
 	int ncrtc = res->ncrtc + list_length(crtcs);
