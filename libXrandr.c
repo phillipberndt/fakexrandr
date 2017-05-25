@@ -12,6 +12,8 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/extensions/Xinerama.h>
 #include <X11/Xlib.h>
@@ -189,11 +191,11 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 	for(config = config_file; (int)(config - config_file) <= (int)config_file_size; ) {
 		// Walk through the configuration file and search for the target_edid
 		unsigned int size = *(unsigned int *)config;
-		char *name = &config[4];
+		// char *name = &config[4];
 		char *edid = &config[4 + 128];
 		unsigned int width = *(unsigned int *)&config[4 + 128 + 768];
 		unsigned int height = *(unsigned int *)&config[4 + 128 + 768 + 4];
-		unsigned int count = *(unsigned int *)&config[4 + 128 + 768 + 4 + 4];
+		// unsigned int count = *(unsigned int *)&config[4 + 128 + 768 + 4 + 4];
 
 		if(strncmp(edid, target_edid, 768) == 0) {
 			XRROutputInfo *output_info = _XRRGetOutputInfo(dpy, resources, output);
@@ -206,9 +208,9 @@ static int config_handle_output(Display *dpy, XRRScreenResources *resources, RRO
 				return 0;
 			}
 
-			if(output_crtc->width == (int)width && output_crtc->height == (int)height) {
+			if(output_crtc->width == (unsigned)width && output_crtc->height == (unsigned)height) {
 				// If it is found and the size matches, add fake outputs/crtcs to the list
-				int n = 0;
+				unsigned n = 0;
 				_config_foreach_split(config + 4 + 128 + 768 + 4 + 4 + 4, &n, 0, 0, width, height, resources, output, output_info, output_crtc, fake_crtcs, fake_outputs, fake_modes);
 				return 1;
 			}
@@ -279,7 +281,7 @@ static int open_configuration() {
 */
 static int get_output_edid(Display *dpy, RROutput output, char *edid) {
 	Atom actual_type;
-	unsigned int actual_format;
+	int actual_format;
 	unsigned long nitems;
 	unsigned long bytes_after;
 	unsigned char *prop;
@@ -288,7 +290,7 @@ static int get_output_edid(Display *dpy, RROutput output, char *edid) {
 			0, 0, 0, &actual_type, &actual_format, &nitems, &bytes_after, &prop);
 
 	if(nitems > 0) {
-		int i;
+		unsigned i;
 		for(i=0; i<nitems; i++) {
 			edid[2*i] = ((prop[i] >> 4) & 0xf) + '0';
 			if(edid[2*i] > '9') {
