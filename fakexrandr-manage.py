@@ -689,6 +689,13 @@ def perform_action(action):
         configuration_data = serialize_configurations(configurations.values())
         with open(CONFIGURATION_FILE_PATH, "wb") as output:
             output.write(configuration_data)
+
+    elif action == "short-help":
+        print("fakexrandr manage script\n"
+              "Syntax: fakexrandr-manage <gui|dump-config|show-available|clear-config|\n"
+              "                           set-config|help>\n\n"
+              "I'd run the gui per default for you, but PyGobject isn't installed.\n\n")
+
     else:
         print("fakexrandr manage script\n"
               "Syntax: fakexrandr-manage <gui|dump-config|show-available|clear-config|\n"
@@ -720,6 +727,6 @@ if __name__ == '__main__':
     elif HAS_GTK:
         action = "gui"
     else:
-        action = "dump-config"
+        action = "short-help"
 
     perform_action(action)
