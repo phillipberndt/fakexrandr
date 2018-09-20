@@ -54,6 +54,10 @@ attention to any warnings/errors from the configure script. To compile the
 library, you will need the XRandR and X11 development packages for your
 distribution.
 
+In case of Ubuntu, install the following prerequisites:
+
+     sudo apt-get install xorg-dev libglu1-mesa-dev build-essential python3-gi
+
 After installation, use the `fakexrandr-manage` tool to create a configuration (in
 `~/.config/fakexrandr.bin`).
 
