@@ -57,7 +57,7 @@ distribution.
 In case of Ubuntu, install the following prerequisites:
 
      sudo apt-get install xorg-dev libglu1-mesa-dev build-essential \
-     python3-gi python-gi-dev python-gi-cairo
+     python3-gi python-gi-dev python-gi-cairo python-is-python3
 
 After installation, use the `fakexrandr-manage` tool to create a configuration (in
 `~/.config/fakexrandr.bin`).
