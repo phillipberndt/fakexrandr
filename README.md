@@ -138,3 +138,7 @@ See also
  * https://gist.github.com/phillipberndt/7688785
    For my version of Fake xinerama, based on Kris Maglione's version. Note
    that this is now included in FakeXRandR.
+ 
+ * Unfortunately, many background and slideshow applications are not working with fakerandr.
+   Here is a background slideshow that is explicitly programmed to work with fakerandr: [fakexrandr-background](https://github.com/Alwinator/fakexrandr-background)
+   (It is third-party and not developed from the fakerandr programmers)
